@@ -1,0 +1,133 @@
+/* Manabie — Colors & Typography Tokens
+   Derived from Figma: [Final] Learner app.fig
+   Primary usage — see METADATA.md: Roboto, Noto Sans JP, SF Pro
+*/
+
+/* ---- Font imports (Google Fonts substitutes) ---- */
+/* Manabie uses: Roboto, Noto Sans JP, SF Pro Display/Text, Inter, Nunito.
+   SF Pro is Apple-only; web-safe fallback: system-ui / -apple-system. */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=Inter:wght@400;500;600;700&family=Nunito:wght@400;700;800&display=swap');
+
+:root {
+  /* ===== BRAND COLORS ===== */
+  --mnb-cyan: rgb(28, 183, 235);        /* #1CB7EB  — top brand color (150k uses) */
+  --mnb-blue: rgb(57, 90, 210);         /* #395AD2  — primary button / action */
+  --mnb-blue-dark: rgb(23, 43, 77);     /* #172B4D */
+  --mnb-blue-soft: rgb(156, 178, 255);  /* #9CB2FF */
+  --mnb-indigo: rgb(85, 51, 255);       /* stripe gradient tail */
+
+  /* Gradient used on cover/marketing */
+  --mnb-gradient-stripe: linear-gradient(180deg,
+    rgb(165, 254, 202) 0%,
+    rgb(62, 220, 235) 28%,
+    rgb(37, 148, 255) 62%,
+    rgb(85, 51, 255) 100%);
+
+  /* ===== TEXT / NEUTRALS ===== */
+  --fg-1:  rgba(28, 30, 44, 0.87);  /* primary text */
+  --fg-2:  rgba(28, 30, 44, 0.60);  /* secondary */
+  --fg-3:  rgba(28, 30, 44, 0.48);  /* tertiary / inactive */
+  --fg-4:  rgba(28, 30, 44, 0.12);  /* divider / hairline */
+  --fg-ink: rgb(28, 30, 44);        /* true text */
+  --fg-slate: rgb(64, 69, 100);     /* secondary text */
+  --fg-muted: rgb(88, 97, 137);     /* muted body */
+  --fg-pale: rgb(168, 174, 199);    /* placeholder */
+
+  --bg-0: rgb(255, 255, 255);       /* surface / cards */
+  --bg-1: rgb(247, 248, 251);       /* page bg, cool */
+  --bg-2: rgb(242, 242, 244);       /* page bg, neutral */
+  --bg-3: rgb(229, 231, 237);       /* subtle divider / chip */
+  --bg-4: rgb(218, 221, 231);       /* stronger divider */
+
+  /* ===== SEMANTIC ===== */
+  --success:       rgb(58, 206, 133);   /* green ring / progress */
+  --success-ink:   rgb(23, 138, 81);    /* text on green chips */
+  --success-soft:  rgb(238, 255, 246);  /* chip bg */
+  --success-alt:   rgb(39, 174, 96);    /* full-saturation */
+
+  --warning:       rgb(255, 194, 10);
+  --warning-alt:   rgb(242, 201, 76);
+
+  --danger:        rgb(209, 56, 66);
+
+  --info:          rgb(47, 128, 237);
+
+  /* Achievement / gamification */
+  --crown-gold:    rgb(255, 194, 10);
+  --crown-silver:  rgb(196, 196, 196);
+  --crown-bronze:  rgb(184, 115, 51);
+
+  /* ===== SHADOWS ===== */
+  --shadow-card:   0 5px 20px rgba(0, 0, 0, 0.05);
+  --shadow-button: 0 5px 20px rgba(57, 90, 210, 0.20);
+  --shadow-sheet:  0 8px 24px rgba(52, 59, 87, 0.10);
+  --shadow-hairline: inset 0 0 0 1px rgba(28, 30, 44, 0.12);
+
+  /* ===== RADII ===== */
+  --r-xs: 4px;    /* chips / small tags */
+  --r-sm: 8px;    /* card outer corners, inputs */
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-pill: 1000px; /* pill buttons, avatars */
+
+  /* ===== SPACING (4pt grid) ===== */
+  --s-0: 0;
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+
+  /* ===== TYPE — FAMILY STACKS ===== */
+  --font-body: "Roboto", "Noto Sans JP", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Noto Sans JP", "Roboto", system-ui, -apple-system, sans-serif;
+  --font-ui: -apple-system, "SF Pro Text", "SF Pro Display", "Roboto", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* ===== TYPE — BASE SCALE ===== */
+  /* Sizes mirror the most-used px values in Figma */
+  --fs-10: 10px;  /* chips, labels, bottom-nav */
+  --fs-12: 12px;  /* small body / toDo counters */
+  --fs-14: 14px;  /* body / list item */
+  --fs-16: 16px;  /* body emphasized */
+  --fs-18: 18px;  /* button label, section title */
+  --fs-22: 22px;
+  --fs-24: 24px;  /* H2 */
+  --fs-28: 28px;  /* page title (mobile) */
+  --fs-34: 34px;
+  --fs-54: 54px;  /* display number (scores) */
+
+  --lh-tight: 1.2;
+  --lh-normal: 1.4;
+  --lh-loose: 1.6;
+
+  /* Letter spacing — Figma uses 0.5px on chip labels */
+  --ls-chip: 0.5px;
+}
+
+/* ==========================================================
+   SEMANTIC TYPOGRAPHY — use these selectors in UI / prototypes
+   ========================================================== */
+.mnb-h1 { font: 700 28px/40px var(--font-display); color: var(--fg-1); letter-spacing: -0.01em; }
+.mnb-h2 { font: 700 24px/32px var(--font-display); color: var(--fg-1); }
+.mnb-h3 { font: 700 18px/24px var(--font-body); color: var(--fg-1); }
+.mnb-title { font: 500 18px/24px var(--font-body); color: var(--fg-1); } /* section titles in cards */
+.mnb-body { font: 400 14px/20px var(--font-body); color: var(--fg-1); }
+.mnb-body-strong { font: 700 14px/18px var(--font-body); color: var(--fg-1); } /* item titles */
+.mnb-small { font: 400 12px/16px var(--font-body); color: var(--fg-1); }
+.mnb-tiny { font: 400 10px/12px var(--font-body); color: var(--fg-2); letter-spacing: var(--ls-chip); }
+.mnb-btn-label { font: 700 18px/24px var(--font-display); letter-spacing: 0; }
+.mnb-nav-label { font: 400 10px/12px var(--font-display); color: var(--fg-3); }
+.mnb-num-display { font: 900 54px/1 var(--font-body); color: var(--fg-1); letter-spacing: -0.02em; }
+
+body {
+  font-family: var(--font-body);
+  color: var(--fg-1);
+  background: var(--bg-2);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
