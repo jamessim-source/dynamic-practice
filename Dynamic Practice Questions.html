@@ -71,6 +71,7 @@
   <h3>Tweaks <button class="close-x" onclick="document.getElementById('tweaksPanel').classList.remove('open')">×</button></h3>
   <label>Jump to screen</label>
   <div class="seg" id="tweak-screen">
+    <button data-v="landing">Landing</button>
     <button data-v="home">Home</button>
     <button data-v="configure" class="active">Config</button>
     <button data-v="review">Review</button>
@@ -90,6 +91,7 @@
 <script type="text/babel" src="ios-frame.jsx"></script>
 <script type="text/babel" src="components/primitives.jsx"></script>
 <script type="text/babel" src="components/data.jsx"></script>
+<script type="text/babel" src="components/screen-landing.jsx"></script>
 <script type="text/babel" src="components/screen-home.jsx"></script>
 <script type="text/babel" src="components/screen-configure.jsx"></script>
 <script type="text/babel" src="components/screen-flow.jsx"></script>
@@ -102,7 +104,7 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{}/*EDITMODE-END*/;
 
 function App() {
   const [screen, setScreen] = useState(() => {
-    try { return localStorage.getItem('dpq_screen') || 'configure'; } catch (e) { return 'configure'; }
+    try { return localStorage.getItem('dpq_screen') || 'landing'; } catch (e) { return 'landing'; }
   });
   const [selection, setSelection] = useState({});
   const [practiceMeta, setPracticeMeta] = useState({ total: 10, name: '' });
@@ -143,11 +145,12 @@ function App() {
   useEffect(() => {
     const tabs = document.getElementById('screenTabs');
     const screens = [
-      ['home', '1 · Course'],
-      ['configure', '2 · Configure'],
-      ['review', '3 · Review'],
-      ['practice', '4 · Practice'],
-      ['submitted', '5 · Submitted'],
+      ['landing', '1 · Landing'],
+      ['home', '2 · Course'],
+      ['configure', '3 · Configure'],
+      ['review', '4 · Review'],
+      ['practice', '5 · Practice'],
+      ['submitted', '6 · Submitted'],
     ];
     tabs.innerHTML = screens.map(([k, l]) => `<button data-v="${k}" class="${screen === k ? 'active' : ''}">${l}</button>`).join('');
     tabs.querySelectorAll('button').forEach(b => {
@@ -155,12 +158,14 @@ function App() {
     });
   }, [screen]);
 
-  const { MnbCourseHomeScreen, MnbConfigureScreen, MnbReviewScreen, MnbPracticeScreen, MnbSubmittedScreen } = window;
+  const { MnbCourseSelectScreen, MnbCourseHomeScreen, MnbConfigureScreen, MnbReviewScreen, MnbPracticeScreen, MnbSubmittedScreen } = window;
   const IOSDevice = window.IOSDevice;
 
   let content;
-  if (screen === 'home') {
-    content = <MnbCourseHomeScreen onCreatePractice={() => setScreen('configure')} onOpenPastSet={() => {}}/>;
+  if (screen === 'landing') {
+    content = <MnbCourseSelectScreen onSelectCourse={() => setScreen('home')}/>;
+  } else if (screen === 'home') {
+    content = <MnbCourseHomeScreen onBack={() => setScreen('landing')} onCreatePractice={() => setScreen('configure')} onOpenPastSet={() => {}}/>;
   } else if (screen === 'configure') {
     content = <MnbConfigureScreen
       onBack={() => setScreen('home')}
@@ -202,7 +207,7 @@ function App() {
 
 // Wait for all dependency scripts to transpile and register
 function boot() {
-  if (!window.MnbConfigureScreen || !window.IOSDevice) {
+  if (!window.MnbCourseSelectScreen || !window.MnbConfigureScreen || !window.IOSDevice) {
     return setTimeout(boot, 40);
   }
   ReactDOM.createRoot(document.getElementById('root')).render(<App/>);

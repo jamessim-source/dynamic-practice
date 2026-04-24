@@ -163,6 +163,17 @@
   // Flat chapters array for backward compat (LoList, ReviewScreen, HomeScreen use this)
   course.chapters = books.flatMap(b => b.chapters);
 
+  // Admin-defined guided learning set for Term 1
+  const guidedSet = {
+    name: 'Term 1 Study Plan',
+    loIds: [
+      'lo1-1-a', 'lo1-2-a', 'lo1-3-a',
+      'lo2-1-a', 'lo2-1-b', 'lo2-2-a',
+      'lo4-1-a', 'lo4-2-a',
+      'lo5-1-a', 'lo5-2-a',
+    ],
+  };
+
   // Sample practice questions (for the question-answering screen)
   const sampleQuestions = [
     {
@@ -207,5 +218,5 @@
     },
   ];
 
-  Object.assign(window, { PRACTICE_COURSE: course, PRACTICE_QUESTIONS: sampleQuestions });
+  Object.assign(window, { PRACTICE_COURSE: course, PRACTICE_QUESTIONS: sampleQuestions, PRACTICE_GUIDED_SET: guidedSet });
 })();

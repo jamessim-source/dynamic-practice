@@ -6,8 +6,6 @@
   // ========== REVIEW SCREEN ==========
   function ReviewScreen({ selection, onBack, onStart, onEdit }) {
     const course = window.PRACTICE_COURSE;
-    const [shuffle, setShuffle] = useState(true);
-    const [setName, setSetName] = useState('');
 
     // Build rows: book-kind entries first, then LO-kind entries grouped by chapter.
     const rows = [];
@@ -69,39 +67,6 @@
             </div>
           </div>
 
-          {/* Name input */}
-          <div style={{background: '#fff', borderRadius: 12, padding: 14, border: '1px solid rgba(28,30,44,.12)', marginBottom: 10}}>
-            <label style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.55)', letterSpacing: .3, textTransform: 'uppercase'}}>Name (optional)</label>
-            <input
-              type="text" placeholder="e.g. Weekend review"
-              value={setName} onChange={(e) => setSetName(e.target.value)}
-              style={{
-                display: 'block', width: '100%', marginTop: 6, border: 'none', outline: 'none',
-                fontFamily: 'Roboto', fontSize: 15, color: 'rgba(28,30,44,.87)',
-                padding: '4px 0', borderBottom: '1px solid rgba(28,30,44,.12)',
-              }}
-            />
-          </div>
-
-          {/* Settings */}
-          <div style={{background: '#fff', borderRadius: 12, border: '1px solid rgba(28,30,44,.12)', marginBottom: 16, overflow: 'hidden'}}>
-            <div style={{padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12}}>
-              <div style={{width: 32, height: 32, borderRadius: 8, background: '#E4F7FE', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                <Icon.shuffle color="#0E7FA6" size={16}/>
-              </div>
-              <div style={{flex: 1}}>
-                <div style={{fontFamily: 'Roboto', fontWeight: 500, fontSize: 14, color: 'rgba(28,30,44,.87)'}}>Shuffle questions</div>
-                <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.55)', marginTop: 2}}>Randomize order across chapters</div>
-              </div>
-              <Toggle on={shuffle} onChange={setShuffle}/>
-            </div>
-          </div>
-
-          {/* Breakdown per chapter */}
-          <div style={{fontFamily: '"Noto Sans JP", Roboto', fontWeight: 700, fontSize: 14, color: 'rgba(28,30,44,.87)', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-            <span>Breakdown</span>
-            <button onClick={onEdit} style={{border: 'none', background: 'transparent', color: '#395AD2', fontFamily: 'Roboto', fontWeight: 600, fontSize: 13, cursor: 'pointer'}}>Edit</button>
-          </div>
           {rows.map((r, i) => {
             if (r.kind === 'book') {
               return (
@@ -153,24 +118,8 @@
         </div>
 
         <div style={{flexShrink: 0, padding: '12px 16px 14px', background: '#fff', borderTop: '1px solid rgba(28,30,44,.08)', boxShadow: '0 -6px 16px rgba(0,0,0,.04)'}}>
-          <Button full size="md" onClick={() => onStart({selection, name: setName, shuffle, total})}>Start Practice</Button>
+          <Button full size="md" onClick={() => onStart({selection, total})}>Start Practice</Button>
         </div>
-      </div>
-    );
-  }
-
-  function Toggle({ on, onChange }) {
-    return (
-      <div onClick={() => onChange(!on)} style={{
-        width: 40, height: 24, borderRadius: 999,
-        background: on ? '#395AD2' : 'rgba(28,30,44,.18)',
-        position: 'relative', cursor: 'pointer', transition: 'background .2s',
-      }}>
-        <div style={{
-          position: 'absolute', top: 2, left: on ? 18 : 2,
-          width: 20, height: 20, borderRadius: '50%', background: '#fff',
-          transition: 'left .2s', boxShadow: '0 2px 4px rgba(0,0,0,.15)',
-        }}/>
       </div>
     );
   }

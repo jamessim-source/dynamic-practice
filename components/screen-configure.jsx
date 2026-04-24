@@ -1,13 +1,12 @@
 // Practice Set — Configure screen
-// Users select books (expanding to chapters and topics for reference) OR learning objectives.
-// Question count is set at the book level only. Chapters/topics are for navigation only.
+// Users select books (expanding to chapters, topics, and LOs for reference).
+// Question count is set at the book level only.
 (function () {
   const { useState, useEffect } = React;
   const { MnbIcon: Icon, MnbButton: Button, MnbCheckbox: Checkbox, MnbTopBar: TopBar } = window;
 
   // Selection model:
-  //   By Book: { [bookId]: { count, kind: 'book', parent: {bookId, title, code} } }
-  //   By LO:   { [loId]:   { count, kind: 'lo',   parent: {...} } }
+  //   { [bookId]: { count, kind: 'book', parent: {bookId, title, code} } }
 
   // ========= Compact count input (no +/− buttons) =========
   function CountInput({ value, max, onChange }) {
@@ -38,31 +37,67 @@
     );
   }
 
+  // ========= Compact toggle switch =========
+  function Toggle({ value, onChange }) {
+    return (
+      <div
+        onClick={() => onChange(!value)}
+        style={{
+          width: 40, height: 24, borderRadius: 12, flexShrink: 0,
+          background: value ? '#395AD2' : 'rgba(28,30,44,.2)',
+          transition: 'background .2s', position: 'relative', cursor: 'pointer',
+        }}>
+        <div style={{
+          width: 20, height: 20, borderRadius: '50%', background: '#fff',
+          position: 'absolute', top: 2, left: value ? 18 : 2,
+          transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.25)',
+        }}/>
+      </div>
+    );
+  }
+
+  // ========= LO display row — browse only, no selection =========
+  function LoDisplayRow({ lo }) {
+    return (
+      <div style={{
+        padding: '7px 14px 7px 72px',
+        borderTop: '1px solid rgba(28,30,44,.05)',
+        background: '#f5f5f7',
+        display: 'flex', alignItems: 'center', gap: 8,
+      }}>
+        <span style={{
+          padding: '1px 6px', borderRadius: 4, flexShrink: 0,
+          background: 'rgba(57,90,210,.08)', color: '#395AD2',
+          fontFamily: 'Roboto', fontWeight: 700, fontSize: 10, letterSpacing: .3,
+          whiteSpace: 'nowrap',
+        }}>{lo.code}</span>
+        <div style={{fontFamily: 'Roboto', fontSize: 12, color: 'rgba(28,30,44,.7)', lineHeight: 1.3}}>
+          {lo.title}
+        </div>
+      </div>
+    );
+  }
+
   // ========= Topic row — display only, no checkbox =========
   function TopicRow({ topic }) {
     return (
-      <div style={{
-        padding: '9px 14px 9px 56px',
-        borderTop: '1px solid rgba(28,30,44,.06)',
-        background: '#fafafa',
-        display: 'flex', alignItems: 'center', gap: 10,
-      }}>
-        <div style={{flex: 1, minWidth: 0}}>
-          <div style={{fontFamily: 'Roboto', fontWeight: 500, fontSize: 13, color: 'rgba(28,30,44,.8)'}}>
-            {topic.title}
-          </div>
-          <div style={{display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5}}>
-            {topic.los.map(lo => (
-              <span key={lo.id} style={{
-                padding: '2px 6px', borderRadius: 4,
-                background: 'rgba(57,90,210,.08)', color: '#395AD2',
-                fontFamily: 'Roboto', fontWeight: 700, fontSize: 10, letterSpacing: .3,
-                whiteSpace: 'nowrap',
-              }}>{lo.code}</span>
-            ))}
+      <>
+        <div style={{
+          padding: '9px 14px 9px 56px',
+          borderTop: '1px solid rgba(28,30,44,.06)',
+          background: '#fafafa',
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <div style={{flex: 1, minWidth: 0}}>
+            <div style={{fontFamily: 'Roboto', fontWeight: 500, fontSize: 13, color: 'rgba(28,30,44,.8)'}}>
+              {topic.title}
+            </div>
           </div>
         </div>
-      </div>
+        {topic.los.map(lo => (
+          <LoDisplayRow key={lo.id} lo={lo}/>
+        ))}
+      </>
     );
   }
 
@@ -163,175 +198,31 @@
     );
   }
 
-  // ========= LO row =========
-  function LoRow({ lo, chapter, topic, count, onChange }) {
-    const selected = count > 0;
-    return (
-      <div style={{
-        padding: '12px 14px',
-        borderTop: '1px solid rgba(28,30,44,.08)',
-        background: selected ? '#F7FAFF' : '#fff',
-        transition: 'background .15s',
-        display: 'flex', alignItems: 'center', gap: 12,
-      }}>
-        <Checkbox
-          checked={selected}
-          onChange={(v) => onChange(v ? Math.min(3, lo.available) : 0)}
-          size={20}
-        />
-        <div style={{flex: 1, minWidth: 0}}>
-          <div style={{display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2}}>
-            <span style={{
-              padding: '1px 7px', borderRadius: 4,
-              background: 'rgba(57,90,210,.1)', color: '#395AD2',
-              fontFamily: 'Roboto', fontWeight: 700, fontSize: 10, letterSpacing: .3,
-            }}>{lo.code}</span>
-            <span style={{fontFamily: 'Roboto', fontSize: 10, color: 'rgba(28,30,44,.45)', letterSpacing: .2, textTransform: 'uppercase'}}>
-              {chapter.code} · {topic.title}
-            </span>
-          </div>
-          <div style={{fontFamily: 'Roboto', fontWeight: 500, fontSize: 13, color: 'rgba(28,30,44,.87)', lineHeight: 1.35}}>
-            {lo.title}
-          </div>
-          <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.55)', marginTop: 3, fontVariantNumeric: 'tabular-nums'}}>
-            {lo.available} questions in pool
-          </div>
-        </div>
-        {selected && (
-          <CountInput value={count} max={lo.available} onChange={onChange}/>
-        )}
-      </div>
-    );
-  }
-
-  // ========= LO mode list =========
-  function LoList({ selection, onSelectionChange }) {
-    const course = window.PRACTICE_COURSE;
-    const [query, setQuery] = useState('');
-    const q = query.trim().toLowerCase();
-
-    const flat = [];
-    course.chapters.forEach(ch => ch.topics.forEach(t => t.los.forEach(lo => flat.push({chapter: ch, topic: t, lo}))));
-
-    const matches = q
-      ? flat.filter(x =>
-          x.lo.code.toLowerCase().includes(q) ||
-          x.lo.title.toLowerCase().includes(q) ||
-          x.topic.title.toLowerCase().includes(q) ||
-          x.chapter.title.toLowerCase().includes(q))
-      : flat;
-
-    const byChapter = new Map();
-    matches.forEach(x => {
-      if (!byChapter.has(x.chapter.id)) byChapter.set(x.chapter.id, { chapter: x.chapter, items: [] });
-      byChapter.get(x.chapter.id).items.push(x);
-    });
-
-    const setLoCount = (x, count) => {
-      const next = {...selection};
-      if (count <= 0) delete next[x.lo.id];
-      else next[x.lo.id] = { count, kind: 'lo',
-        parent: { chapterId: x.chapter.id, code: x.chapter.code, chapterTitle: x.chapter.title, topicId: x.topic.id, topicTitle: x.topic.title, title: x.lo.title, loCode: x.lo.code } };
-      onSelectionChange(next);
-    };
-
-    return (
-      <>
-        <div style={{
-          background: '#fff', borderRadius: 10, border: '1px solid rgba(28,30,44,.12)',
-          padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12,
-        }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="rgba(28,30,44,.45)" strokeWidth="2"/><path d="M20 20l-4.5-4.5" stroke="rgba(28,30,44,.45)" strokeWidth="2" strokeLinecap="round"/></svg>
-          <input
-            type="text" placeholder="Search LO code, skill, or topic…"
-            value={query} onChange={(e) => setQuery(e.target.value)}
-            style={{
-              flex: 1, border: 'none', outline: 'none', background: 'transparent',
-              fontFamily: 'Roboto', fontSize: 13, color: 'rgba(28,30,44,.87)',
-            }}
-          />
-          {query && (
-            <button onClick={() => setQuery('')} style={{border: 'none', background: 'transparent', cursor: 'pointer', color: 'rgba(28,30,44,.45)', fontSize: 14, padding: 0}}>×</button>
-          )}
-        </div>
-
-        {byChapter.size === 0 && (
-          <div style={{textAlign: 'center', padding: '28px 16px', color: 'rgba(28,30,44,.5)', fontFamily: 'Roboto', fontSize: 13}}>
-            No learning objectives match "{query}".
-          </div>
-        )}
-
-        {[...byChapter.values()].map(({chapter, items}) => {
-          const chapterTotal = items.reduce((a, x) => a + (selection[x.lo.id]?.count || 0), 0);
-          return (
-            <div key={chapter.id} style={{
-              background: '#fff', borderRadius: 12, marginBottom: 10,
-              border: '1px solid rgba(28,30,44,.12)', overflow: 'hidden',
-              boxShadow: chapterTotal > 0 ? '0 3px 10px rgba(57,90,210,.08)' : 'none',
-            }}>
-              <div style={{padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10}}>
-                <div style={{flex: 1, minWidth: 0}}>
-                  <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.55)', letterSpacing: .3, textTransform: 'uppercase'}}>{chapter.code}</div>
-                  <div style={{fontFamily: '"Noto Sans JP", Roboto', fontWeight: 700, fontSize: 14, color: 'rgba(28,30,44,.87)', marginTop: 2}}>{chapter.title}</div>
-                </div>
-                {chapterTotal > 0 && (
-                  <span style={{
-                    padding: '3px 9px', borderRadius: 999, background: '#EAF1FF', color: '#395AD2',
-                    fontFamily: 'Roboto', fontWeight: 700, fontSize: 11, fontVariantNumeric: 'tabular-nums',
-                  }}>{chapterTotal} Qs</span>
-                )}
-              </div>
-              {items.map(x => (
-                <LoRow
-                  key={x.lo.id}
-                  lo={x.lo}
-                  chapter={x.chapter}
-                  topic={x.topic}
-                  count={selection[x.lo.id]?.count || 0}
-                  onChange={(c) => setLoCount(x, c)}
-                />
-              ))}
-            </div>
-          );
-        })}
-      </>
-    );
-  }
-
-  // ========= Segmented tabs =========
-  function ModeTabs({ mode, onChange }) {
-    const tabs = [
-      {v: 'book', label: 'By Book'},
-      {v: 'lo', label: 'By Learning Objective'},
-    ];
-    return (
-      <div style={{display: 'flex', background: '#F2F2F4', borderRadius: 10, padding: 3, gap: 3}}>
-        {tabs.map(t => {
-          const active = mode === t.v;
-          return (
-            <button key={t.v} onClick={() => onChange(t.v)} style={{
-              flex: 1, padding: '8px 10px', borderRadius: 7, border: 'none',
-              background: active ? '#fff' : 'transparent',
-              color: active ? '#395AD2' : 'rgba(28,30,44,.65)',
-              fontFamily: 'Roboto', fontWeight: active ? 700 : 500, fontSize: 12,
-              cursor: 'pointer', transition: 'all .15s',
-              boxShadow: active ? '0 2px 6px rgba(0,0,0,.08)' : 'none',
-            }}>{t.label}</button>
-          );
-        })}
-      </div>
-    );
-  }
-
   // ========= Main configure screen =========
   function ConfigureScreen({ onBack, onReview }) {
     const course = window.PRACTICE_COURSE;
-    const [mode, setMode] = useState('book');
+    const guidedSet = window.PRACTICE_GUIDED_SET;
     const [selection, setSelection] = useState({});
-    const [openMap, setOpenMap] = useState({}); // collapsed by default
+    const [openMap, setOpenMap] = useState({});
+    const [guidedOnly, setGuidedOnly] = useState(false);
+
+    const guidedLoIds = new Set(guidedSet ? guidedSet.loIds : []);
+    const displayBooks = (guidedOnly && guidedSet)
+      ? course.books.map(book => ({
+          ...book,
+          chapters: book.chapters
+            .map(ch => ({
+              ...ch,
+              topics: ch.topics
+                .map(t => ({ ...t, los: t.los.filter(lo => guidedLoIds.has(lo.id)) }))
+                .filter(t => t.los.length > 0),
+            }))
+            .filter(ch => ch.topics.length > 0),
+        })).filter(book => book.chapters.length > 0)
+      : course.books;
 
     const totalSelected = Object.values(selection).reduce((a, v) => a + (v.count || 0), 0);
-    const scopesCount = Object.values(selection).filter(v => v.kind === mode).length;
+    const booksSelected = Object.values(selection).filter(v => v.kind === 'book').length;
 
     const onBookChange = (bookId, bookData) => {
       setSelection(prev => {
@@ -353,7 +244,7 @@
     const selectAllBooks = () => {
       setSelection(prev => {
         const next = {...prev};
-        course.books.forEach(b => {
+        displayBooks.forEach(b => {
           if (!next[b.id]) {
             next[b.id] = { count: Math.min(10, b.available), kind: 'book', parent: { bookId: b.id, title: b.title, code: b.code } };
           }
@@ -362,23 +253,15 @@
       });
     };
 
-    const clearCurrentMode = () => {
-      setSelection(prev => {
-        const next = {};
-        Object.entries(prev).forEach(([k, v]) => { if (v.kind !== mode) next[k] = v; });
-        return next;
-      });
-    };
+    const clearSelection = () => setSelection({});
 
     const toggleOpen = (id) => setOpenMap(m => ({...m, [id]: !m[id]}));
-
-    const selectedInMode = Object.values(selection).filter(v => v.kind === mode).length;
 
     return (
       <div style={{flex: 1, background: '#F2F2F4', display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
         <TopBar title="Create Practice Set" onBack={onBack}/>
 
-        {/* Summary + mode switch */}
+        {/* Summary + course label */}
         <div style={{
           background: '#fff', padding: '12px 16px 14px',
           borderBottom: '1px solid rgba(28,30,44,.08)', flexShrink: 0,
@@ -392,24 +275,29 @@
                 </span>
               </div>
               <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.55)', marginTop: 2}}>
-                {scopesCount} {mode === 'book' ? `book${scopesCount === 1 ? '' : 's'}` : `scope${scopesCount === 1 ? '' : 's'}`} selected
+                {booksSelected} book{booksSelected === 1 ? '' : 's'} selected
               </div>
             </div>
             <button
-              onClick={selectedInMode ? clearCurrentMode : (mode === 'book' ? selectAllBooks : () => {})}
-              disabled={mode === 'lo' && !selectedInMode}
+              onClick={booksSelected ? clearSelection : selectAllBooks}
               style={{
-                border: 'none', background: 'transparent',
-                color: (mode === 'lo' && !selectedInMode) ? 'rgba(28,30,44,.3)' : '#395AD2',
-                fontFamily: 'Roboto', fontWeight: 600, fontSize: 13,
-                cursor: (mode === 'lo' && !selectedInMode) ? 'default' : 'pointer',
+                border: 'none', background: 'transparent', color: '#395AD2',
+                fontFamily: 'Roboto', fontWeight: 600, fontSize: 13, cursor: 'pointer',
               }}>
-              {selectedInMode ? 'Clear' : (mode === 'book' ? 'Select all' : '')}
+              {booksSelected ? 'Clear' : 'Select all'}
             </button>
           </div>
 
-          <div style={{marginTop: 12}}>
-            <ModeTabs mode={mode} onChange={setMode}/>
+          {/* Course name */}
+          <div style={{
+            marginTop: 12, padding: '9px 12px', borderRadius: 10,
+            background: '#F2F2F4', display: 'flex', alignItems: 'center', gap: 10,
+          }}>
+            <Icon.book color="#395AD2" size={16}/>
+            <div style={{minWidth: 0}}>
+              <div style={{fontFamily: 'Roboto', fontSize: 10, color: 'rgba(28,30,44,.45)', letterSpacing: .4, textTransform: 'uppercase'}}>{course.code}</div>
+              <div style={{fontFamily: '"Noto Sans JP", Roboto', fontWeight: 700, fontSize: 13, color: 'rgba(28,30,44,.87)', marginTop: 1}}>{course.title}</div>
+            </div>
           </div>
 
           <div style={{
@@ -418,30 +306,43 @@
           }}>
             <Icon.sparkle color="#395AD2" size={14}/>
             <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.75)', lineHeight: 1.45}}>
-              {mode === 'book'
-                ? <span>Questions are drawn <strong>randomly</strong> from all topics within each selected book, up to the number you set per book.</span>
-                : <span>Questions are drawn <strong>randomly</strong> from each selected learning objective up to the number you set.</span>
-              }
+              Questions are drawn <strong>randomly</strong> from all topics within each selected book, up to the number you set per book.
             </div>
           </div>
         </div>
 
         {/* List */}
         <div style={{flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 16px 16px'}}>
-          {mode === 'book' ? (
-            course.books.map(b => (
-              <BookSection
-                key={b.id}
-                book={b}
-                bookEntry={selection[b.id]}
-                onBookChange={onBookChange}
-                openMap={openMap}
-                onToggle={toggleOpen}
-              />
-            ))
-          ) : (
-            <LoList selection={selection} onSelectionChange={setSelection}/>
+          {guidedSet && (
+            <div style={{
+              background: '#fff', borderRadius: 12, marginBottom: 12,
+              border: guidedOnly ? '1.5px solid rgba(57,90,210,.3)' : '1px solid rgba(28,30,44,.1)',
+              padding: '11px 14px', display: 'flex', alignItems: 'center', gap: 12,
+              boxShadow: guidedOnly ? '0 3px 10px rgba(57,90,210,.08)' : 'none',
+              transition: 'border-color .2s, box-shadow .2s',
+            }}>
+              <Icon.target color={guidedOnly ? '#395AD2' : 'rgba(28,30,44,.4)'} size={18}/>
+              <div style={{flex: 1, minWidth: 0}}>
+                <div style={{fontFamily: 'Roboto', fontWeight: 600, fontSize: 13, color: guidedOnly ? '#395AD2' : 'rgba(28,30,44,.87)'}}>
+                  Guided learning set
+                </div>
+                <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.5)', marginTop: 1}}>
+                  {guidedSet.name} · {guidedSet.loIds.length} learning objectives
+                </div>
+              </div>
+              <Toggle value={guidedOnly} onChange={setGuidedOnly}/>
+            </div>
           )}
+          {displayBooks.map(b => (
+            <BookSection
+              key={b.id}
+              book={b}
+              bookEntry={selection[b.id]}
+              onBookChange={onBookChange}
+              openMap={openMap}
+              onToggle={toggleOpen}
+            />
+          ))}
         </div>
 
         {/* Bottom CTA */}
