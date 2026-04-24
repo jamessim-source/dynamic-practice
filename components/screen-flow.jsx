@@ -33,7 +33,6 @@
       if (loEntries.length) rows.push({ kind: 'chapter', chapter: ch, items: loEntries });
     });
     const total = rows.reduce((a, r) => a + (r.kind === 'book' ? r.count : r.items.reduce((b, it) => b + it.count, 0)), 0);
-    const estMin = Math.max(1, Math.round(total * 1.2));
 
     return (
       <div style={{flex: 1, background: '#F2F2F4', display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
@@ -54,7 +53,6 @@
                 <span style={{fontFamily: 'Roboto', fontSize: 14, opacity: .85}}>questions</span>
               </div>
               <div style={{display: 'flex', gap: 16, marginTop: 10, fontFamily: 'Roboto', fontSize: 12, opacity: .9}}>
-                <div style={{display: 'flex', alignItems: 'center', gap: 4}}><Icon.timer color="#fff" size={14}/> ~{estMin} min</div>
                 <div style={{display: 'flex', alignItems: 'center', gap: 4}}>
                   <Icon.book color="#fff" size={14}/>
                   {(() => {
@@ -200,7 +198,6 @@
       <div style={{flex: 1, background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
         <TopBar title={`Question ${idx + 1} of ${total}`} onBack={onBack} right={
           <div style={{display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'Roboto', fontWeight: 500, fontSize: 13, color: 'rgba(28,30,44,.6)'}}>
-            <Icon.timer color="rgba(28,30,44,.6)" size={14}/> 02:37
           </div>
         }/>
 

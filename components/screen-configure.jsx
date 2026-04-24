@@ -51,10 +51,15 @@
           <div style={{fontFamily: 'Roboto', fontWeight: 500, fontSize: 13, color: 'rgba(28,30,44,.8)'}}>
             {topic.title}
           </div>
-          <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.45)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5}}>
-            <span style={{fontVariantNumeric: 'tabular-nums'}}>{topic.available} questions</span>
-            <span>·</span>
-            <span>{topic.los.length} LOs</span>
+          <div style={{display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5}}>
+            {topic.los.map(lo => (
+              <span key={lo.id} style={{
+                padding: '2px 6px', borderRadius: 4,
+                background: 'rgba(57,90,210,.08)', color: '#395AD2',
+                fontFamily: 'Roboto', fontWeight: 700, fontSize: 10, letterSpacing: .3,
+                whiteSpace: 'nowrap',
+              }}>{lo.code}</span>
+            ))}
           </div>
         </div>
       </div>
@@ -92,6 +97,7 @@
     const isSelected = !!bookEntry;
     const bookOpen = !!openMap[book.id];
     const totalTopics = book.chapters.reduce((a, c) => a + c.topics.length, 0);
+    const totalLOs = book.chapters.reduce((a, c) => a + c.topics.reduce((b, t) => b + t.los.length, 0), 0);
 
     const toggleBook = () => {
       if (isSelected) {
@@ -114,8 +120,15 @@
           <Checkbox checked={isSelected} onChange={toggleBook} size={22}/>
           <div style={{flex: 1, minWidth: 0, cursor: 'pointer'}} onClick={() => onToggle(book.id)}>
             <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.5)', letterSpacing: .3, textTransform: 'uppercase', marginBottom: 2}}>{book.code}</div>
-            <div style={{fontFamily: '"Noto Sans JP", Roboto', fontWeight: 700, fontSize: 15, color: 'rgba(28,30,44,.87)', lineHeight: 1.3}}>
-              {book.title}
+            <div style={{display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap'}}>
+              <span style={{fontFamily: '"Noto Sans JP", Roboto', fontWeight: 700, fontSize: 15, color: 'rgba(28,30,44,.87)', lineHeight: 1.3}}>
+                {book.title}
+              </span>
+              <span style={{
+                padding: '2px 7px', borderRadius: 4, flexShrink: 0,
+                background: 'rgba(57,90,210,.1)', color: '#395AD2',
+                fontFamily: 'Roboto', fontWeight: 700, fontSize: 10, letterSpacing: .3,
+              }}>{totalLOs} LOs</span>
             </div>
             <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.5)', marginTop: 4}}>
               {book.chapters.length} chapters · {totalTopics} topics · {book.available} questions
@@ -319,7 +332,6 @@
 
     const totalSelected = Object.values(selection).reduce((a, v) => a + (v.count || 0), 0);
     const scopesCount = Object.values(selection).filter(v => v.kind === mode).length;
-    const estMin = Math.max(1, Math.round(totalSelected * 1.2));
 
     const onBookChange = (bookId, bookData) => {
       setSelection(prev => {
@@ -379,9 +391,8 @@
                   question{totalSelected === 1 ? '' : 's'} total
                 </span>
               </div>
-              <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.55)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6}}>
-                <Icon.timer color="rgba(28,30,44,.45)" size={12}/>
-                ~{estMin} min · {scopesCount} {mode === 'book' ? `book${scopesCount === 1 ? '' : 's'}` : `scope${scopesCount === 1 ? '' : 's'}`}
+              <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.55)', marginTop: 2}}>
+                {scopesCount} {mode === 'book' ? `book${scopesCount === 1 ? '' : 's'}` : `scope${scopesCount === 1 ? '' : 's'}`} selected
               </div>
             </div>
             <button
