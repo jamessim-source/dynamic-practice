@@ -1,22 +1,21 @@
 // Practice Set — Configure screen
-// Users select books (expanding to chapters, topics, and LOs for reference).
-// Question count is set at the book level only.
+// Selection is hierarchical: book > chapter > topic > LO.
+// Checking a parent cascades down; checking a child deselects ancestors.
+// Tag filters narrow the visible LO hierarchy independently of selection.
 (function () {
   const { useState, useEffect } = React;
   const { MnbIcon: Icon, MnbButton: Button, MnbCheckbox: Checkbox, MnbTopBar: TopBar } = window;
 
-  // Selection model:
-  //   { [bookId]: { count, kind: 'book', parent: {bookId, title, code} } }
+  // Filter model: { examRanges: [{from, to}], mode: string, level: string }
+  const EMPTY_FILTER = { examRanges: [], mode: '', level: '' };
 
-  // ========= Compact count input (no +/− buttons) =========
+  // ========= Compact count input =========
   function CountInput({ value, max, onChange }) {
     const [draft, setDraft] = useState(String(value || 1));
     useEffect(() => { setDraft(String(value || 1)); }, [value]);
-
     const commit = (v) => {
       const n = Math.max(1, Math.min(max, parseInt(v, 10) || 1));
-      onChange(n);
-      setDraft(String(n));
+      onChange(n); setDraft(String(n));
     };
     return (
       <input
@@ -26,7 +25,7 @@
         onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: 44, height: 32, borderRadius: 8,
+          width: 44, height: 30, borderRadius: 8,
           border: '1.5px solid rgba(57,90,210,.35)',
           background: '#fff', textAlign: 'center',
           fontFamily: 'Roboto', fontWeight: 700, fontSize: 14, color: '#395AD2',
@@ -37,123 +36,191 @@
     );
   }
 
-  // ========= Compact toggle switch =========
-  function Toggle({ value, onChange }) {
+  // ========= LO row — selectable =========
+  function LoRow({ lo, selCtx }) {
+    const checked = selCtx.isChecked(lo.id);
+    const indeterminate = false; // LOs are leaf nodes
     return (
       <div
-        onClick={() => onChange(!value)}
         style={{
-          width: 40, height: 24, borderRadius: 12, flexShrink: 0,
-          background: value ? '#395AD2' : 'rgba(28,30,44,.2)',
-          transition: 'background .2s', position: 'relative', cursor: 'pointer',
+          padding: '7px 14px 7px 64px',
+          borderTop: '1px solid rgba(28,30,44,.05)',
+          background: checked ? 'rgba(57,90,210,.04)' : '#f5f5f7',
+          display: 'flex', alignItems: 'center', gap: 8,
+          transition: 'background .15s',
         }}>
-        <div style={{
-          width: 20, height: 20, borderRadius: '50%', background: '#fff',
-          position: 'absolute', top: 2, left: value ? 18 : 2,
-          transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.25)',
-        }}/>
-      </div>
-    );
-  }
-
-  // ========= LO display row — browse only, no selection =========
-  function LoDisplayRow({ lo }) {
-    return (
-      <div style={{
-        padding: '7px 14px 7px 72px',
-        borderTop: '1px solid rgba(28,30,44,.05)',
-        background: '#f5f5f7',
-        display: 'flex', alignItems: 'center', gap: 8,
-      }}>
-        <span style={{
-          padding: '1px 6px', borderRadius: 4, flexShrink: 0,
-          background: 'rgba(57,90,210,.08)', color: '#395AD2',
-          fontFamily: 'Roboto', fontWeight: 700, fontSize: 10, letterSpacing: .3,
-          whiteSpace: 'nowrap',
-        }}>{lo.code}</span>
-        <div style={{fontFamily: 'Roboto', fontSize: 12, color: 'rgba(28,30,44,.7)', lineHeight: 1.3}}>
-          {lo.title}
-        </div>
-      </div>
-    );
-  }
-
-  // ========= Topic row — display only, no checkbox =========
-  function TopicRow({ topic }) {
-    return (
-      <>
-        <div style={{
-          padding: '9px 14px 9px 56px',
-          borderTop: '1px solid rgba(28,30,44,.06)',
-          background: '#fafafa',
-          display: 'flex', alignItems: 'center', gap: 10,
-        }}>
-          <div style={{flex: 1, minWidth: 0}}>
-            <div style={{fontFamily: 'Roboto', fontWeight: 500, fontSize: 13, color: 'rgba(28,30,44,.8)'}}>
-              {topic.title}
-            </div>
+        <Checkbox
+          checked={checked}
+          indeterminate={indeterminate}
+          onChange={() => selCtx.toggle(lo.id, 'lo', lo.available)}
+          size={18}
+        />
+<div style={{flex: 1, minWidth: 0}}>
+          <div style={{fontFamily: 'Roboto', fontSize: 12, color: checked ? 'rgba(28,30,44,.87)' : 'rgba(28,30,44,.7)', lineHeight: 1.3}}>
+            {lo.title}
+          </div>
+          <div style={{display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4}}>
+            {(lo.tags?.examScope || []).map(s => (
+              <span key={s} style={{
+                padding: '1px 6px', borderRadius: 4,
+                background: checked ? 'rgba(57,90,210,.1)' : 'rgba(28,30,44,.06)',
+                color: checked ? '#395AD2' : 'rgba(28,30,44,.5)',
+                fontFamily: 'Roboto', fontSize: 10, fontWeight: 500, letterSpacing: .2,
+                whiteSpace: 'nowrap',
+              }}>{window.t('scope')} {s}</span>
+            ))}
+            {(lo.labels || []).map(label => (
+              <span key={label} style={{
+                padding: '1px 6px', borderRadius: 4,
+                background: checked ? 'rgba(57,90,210,.1)' : 'rgba(28,30,44,.06)',
+                color: checked ? '#395AD2' : 'rgba(28,30,44,.5)',
+                fontFamily: 'Roboto', fontSize: 10, fontWeight: 500, letterSpacing: .2,
+                whiteSpace: 'nowrap',
+              }}>{label}</span>
+            ))}
           </div>
         </div>
-        {topic.los.map(lo => (
-          <LoDisplayRow key={lo.id} lo={lo}/>
-        ))}
-      </>
+        {checked && (
+          <CountInput
+            value={selCtx.selection[lo.id].count}
+            max={lo.available}
+            onChange={(n) => selCtx.updateCount(lo.id, n)}
+          />
+        )}
+      </div>
     );
   }
 
-  // ========= Chapter row — expand/collapse only, no checkbox =========
-  function ChapterRow({ chapter, open, onToggle }) {
+  // ========= Topic row — selectable, collapsible =========
+  function TopicRow({ topic, open, onOpenToggle, selCtx }) {
+    const checked    = selCtx.isChecked(topic.id);
+    const indet      = selCtx.isIndeterminate(topic.id, 'topic');
+    const entry      = selCtx.selection[topic.id];
+
+    return (
+      <div style={{borderTop: '1px solid rgba(28,30,44,.06)'}}>
+        <div style={{
+          padding: '9px 14px 9px 48px',
+          background: (checked || indet) ? 'rgba(57,90,210,.03)' : '#fafafa',
+          display: 'flex', alignItems: 'center', gap: 8,
+          transition: 'background .15s',
+        }}>
+          <Checkbox
+            checked={checked}
+            indeterminate={indet}
+            onChange={() => selCtx.toggle(topic.id, 'topic', topic.available)}
+            size={20}
+          />
+          <div style={{flex: 1, minWidth: 0, cursor: 'pointer'}} onClick={onOpenToggle}>
+            <div style={{fontFamily: 'Roboto', fontWeight: 500, fontSize: 13, color: (checked || indet) ? 'rgba(28,30,44,.87)' : 'rgba(28,30,44,.8)'}}>
+              {topic.title}
+            </div>
+            <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.45)', marginTop: 1}}>
+              {topic.los.length} {window.t('los')} · {topic.available} {window.t('questions')}
+            </div>
+          </div>
+          {checked && (
+            <CountInput
+              value={entry.count}
+              max={topic.available}
+              onChange={(n) => selCtx.updateCount(topic.id, n)}
+            />
+          )}
+          <button onClick={onOpenToggle} style={{
+            width: 28, height: 28, border: 'none', background: 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
+          }}>
+            <Icon.chevron open={open} size={16}/>
+          </button>
+        </div>
+        {open && topic.los.map(lo => (
+          <LoRow key={lo.id} lo={lo} selCtx={selCtx}/>
+        ))}
+      </div>
+    );
+  }
+
+  // ========= Chapter row — selectable, collapsible =========
+  function ChapterRow({ chapter, open, onOpenToggle, selCtx, openMap }) {
+    const checked = selCtx.isChecked(chapter.id);
+    const indet   = selCtx.isIndeterminate(chapter.id, 'chapter');
+    const entry   = selCtx.selection[chapter.id];
+
     return (
       <div style={{borderTop: '1px solid rgba(28,30,44,.08)'}}>
-        <div
-          onClick={onToggle}
-          style={{padding: '11px 14px 11px 32px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer'}}
-        >
-          <div style={{flex: 1, minWidth: 0}}>
+        <div style={{
+          padding: '11px 14px 11px 32px',
+          background: (checked || indet) ? 'rgba(57,90,210,.03)' : '#fff',
+          display: 'flex', alignItems: 'center', gap: 10,
+          transition: 'background .15s',
+        }}>
+          <Checkbox
+            checked={checked}
+            indeterminate={indet}
+            onChange={() => selCtx.toggle(chapter.id, 'chapter', chapter.available)}
+            size={20}
+          />
+          <div style={{flex: 1, minWidth: 0, cursor: 'pointer'}} onClick={onOpenToggle}>
             <div style={{fontFamily: 'Roboto', fontSize: 10, color: 'rgba(28,30,44,.45)', textTransform: 'uppercase', letterSpacing: .3}}>{chapter.code}</div>
-            <div style={{fontFamily: '"Noto Sans JP", Roboto', fontWeight: 600, fontSize: 13, color: 'rgba(28,30,44,.87)', marginTop: 1}}>
+            <div style={{fontFamily: '"Noto Sans JP", Roboto', fontWeight: 600, fontSize: 13, color: (checked || indet) ? 'rgba(28,30,44,.87)' : 'rgba(28,30,44,.8)', marginTop: 1}}>
               {chapter.title}
             </div>
             <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.45)', marginTop: 2}}>
-              {chapter.topics.length} topics · {chapter.available} questions
+              {chapter.topics.length} {window.t('topics')} · {chapter.available} {window.t('questions')}
             </div>
           </div>
-          <Icon.chevron open={open} size={18}/>
+          {checked && (
+            <CountInput
+              value={entry.count}
+              max={chapter.available}
+              onChange={(n) => selCtx.updateCount(chapter.id, n)}
+            />
+          )}
+          <button onClick={onOpenToggle} style={{
+            width: 28, height: 28, border: 'none', background: 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
+          }}>
+            <Icon.chevron open={open} size={16}/>
+          </button>
         </div>
         {open && chapter.topics.map(t => (
-          <TopicRow key={t.id} topic={t}/>
+          <TopicRow
+            key={t.id}
+            topic={t}
+            open={!!openMap[t.id]}
+            onOpenToggle={() => selCtx.toggleOpen(t.id)}
+            selCtx={selCtx}
+          />
         ))}
       </div>
     );
   }
 
-  // ========= Book section =========
-  function BookSection({ book, bookEntry, onBookChange, openMap, onToggle }) {
-    const isSelected = !!bookEntry;
-    const bookOpen = !!openMap[book.id];
+  // ========= Book section — selectable, collapsible =========
+  function BookSection({ book, selCtx, openMap }) {
+    const checked    = selCtx.isChecked(book.id);
+    const indet      = selCtx.isIndeterminate(book.id, 'book');
+    const entry      = selCtx.selection[book.id];
+    const bookOpen   = !!openMap[book.id];
     const totalTopics = book.chapters.reduce((a, c) => a + c.topics.length, 0);
-    const totalLOs = book.chapters.reduce((a, c) => a + c.topics.reduce((b, t) => b + t.los.length, 0), 0);
-
-    const toggleBook = () => {
-      if (isSelected) {
-        onBookChange(book.id, null);
-      } else {
-        onBookChange(book.id, { count: Math.min(10, book.available) });
-      }
-    };
+    const totalLOs    = book.chapters.reduce((a, c) => a + c.topics.reduce((b, t) => b + t.los.length, 0), 0);
+    const anyActive   = checked || indet;
 
     return (
       <div style={{
-        background: '#fff', borderRadius: 12, marginBottom: 10,
-        border: `1px solid ${isSelected ? 'rgba(57,90,210,.25)' : 'rgba(28,30,44,.12)'}`,
-        overflow: 'hidden',
-        boxShadow: isSelected ? '0 3px 10px rgba(57,90,210,.08)' : 'none',
+        background: '#fff', borderRadius: 12, marginBottom: 10, overflow: 'hidden',
+        border: `1px solid ${anyActive ? 'rgba(57,90,210,.25)' : 'rgba(28,30,44,.12)'}`,
+        boxShadow: anyActive ? '0 3px 10px rgba(57,90,210,.08)' : 'none',
         transition: 'box-shadow .2s, border-color .2s',
       }}>
-        {/* Book header */}
         <div style={{padding: '14px 14px 14px 16px', display: 'flex', alignItems: 'center', gap: 12}}>
-          <Checkbox checked={isSelected} onChange={toggleBook} size={22}/>
-          <div style={{flex: 1, minWidth: 0, cursor: 'pointer'}} onClick={() => onToggle(book.id)}>
+          <Checkbox
+            checked={checked}
+            indeterminate={indet}
+            onChange={() => selCtx.toggle(book.id, 'book', book.available)}
+            size={22}
+          />
+          <div style={{flex: 1, minWidth: 0, cursor: 'pointer'}} onClick={() => selCtx.toggleOpen(book.id)}>
             <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.5)', letterSpacing: .3, textTransform: 'uppercase', marginBottom: 2}}>{book.code}</div>
             <div style={{display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap'}}>
               <span style={{fontFamily: '"Noto Sans JP", Roboto', fontWeight: 700, fontSize: 15, color: 'rgba(28,30,44,.87)', lineHeight: 1.3}}>
@@ -163,21 +230,21 @@
                 padding: '2px 7px', borderRadius: 4, flexShrink: 0,
                 background: 'rgba(57,90,210,.1)', color: '#395AD2',
                 fontFamily: 'Roboto', fontWeight: 700, fontSize: 10, letterSpacing: .3,
-              }}>{totalLOs} LOs</span>
+              }}>{totalLOs} {window.t('los')}</span>
             </div>
             <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.5)', marginTop: 4}}>
-              {book.chapters.length} chapters · {totalTopics} topics · {book.available} questions
+              {book.chapters.length} {window.t('chapters')} · {totalTopics} {window.t('topics')} · {book.available} {window.t('questions')}
             </div>
           </div>
           <div style={{display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0}}>
-            {isSelected && (
+            {checked && (
               <CountInput
-                value={bookEntry.count}
+                value={entry.count}
                 max={book.available}
-                onChange={(n) => onBookChange(book.id, {...bookEntry, count: n})}
+                onChange={(n) => selCtx.updateCount(book.id, n)}
               />
             )}
-            <button onClick={() => onToggle(book.id)} style={{
+            <button onClick={() => selCtx.toggleOpen(book.id)} style={{
               width: 30, height: 30, borderRadius: '50%', border: 'none',
               background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
             }}>
@@ -185,114 +252,334 @@
             </button>
           </div>
         </div>
-        {/* Chapters (browse only) */}
         {bookOpen && book.chapters.map(ch => (
           <ChapterRow
             key={ch.id}
             chapter={ch}
             open={!!openMap[ch.id]}
-            onToggle={() => onToggle(ch.id)}
+            onOpenToggle={() => selCtx.toggleOpen(ch.id)}
+            selCtx={selCtx}
+            openMap={openMap}
           />
         ))}
       </div>
     );
   }
 
+  // ========= Labeled input for filter sheet =========
+  function FilterInput({ label, value, onChange, placeholder, type = 'text' }) {
+    return (
+      <div style={{
+        flex: 1, borderRadius: 10,
+        border: '1.5px solid rgba(28,30,44,.14)',
+        padding: '9px 13px', background: '#fff',
+      }}>
+        <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.45)', marginBottom: 4, lineHeight: 1}}>{label}</div>
+        <input
+          type={type} inputMode={type === 'number' ? 'numeric' : 'text'}
+          value={value} onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder || '—'}
+          style={{
+            width: '100%', border: 'none', outline: 'none', padding: 0, margin: 0,
+            fontFamily: 'Roboto', fontSize: 15, color: 'rgba(28,30,44,.87)',
+            background: 'transparent', boxSizing: 'border-box',
+          }}
+        />
+      </div>
+    );
+  }
+
+  // ========= Filter sheet — full-screen overlay =========
+  function FilterSheet({ initialFilter, onClose, onApply }) {
+    window.useLang();
+    const initRanges = initialFilter.examRanges.length > 0
+      ? initialFilter.examRanges.map(r => ({...r}))
+      : [{from: '', to: ''}];
+    const [examRanges, setExamRanges] = useState(initRanges);
+    const [mode, setMode]   = useState(initialFilter.mode);
+    const [level, setLevel] = useState(initialFilter.level);
+
+    const updateRange = (i, field, val) =>
+      setExamRanges(prev => prev.map((r, idx) => idx === i ? {...r, [field]: val} : r));
+    const addRange    = () => setExamRanges(prev => [...prev, {from: '', to: ''}]);
+    const removeRange = (i) =>
+      setExamRanges(prev => prev.length === 1 ? [{from: '', to: ''}] : prev.filter((_, idx) => idx !== i));
+    const reset = () => { setExamRanges([{from: '', to: ''}]); setMode(''); setLevel(''); };
+    const buildFilter = () => ({
+      examRanges: examRanges.filter(r => r.from !== '' || r.to !== ''),
+      mode: mode.trim(), level: level.trim(),
+    });
+
+    return (
+      <div style={{position: 'absolute', inset: 0, background: '#F2F2F4', display: 'flex', flexDirection: 'column', zIndex: 10}}>
+        <TopBar title={window.t('filter')} onBack={onClose}/>
+        <div style={{flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px'}}>
+          <div style={{background: '#fff', borderRadius: 12, padding: '16px', border: '1px solid rgba(28,30,44,.1)'}}>
+            <div style={{fontFamily: '"Noto Sans JP", Roboto', fontWeight: 700, fontSize: 15, color: 'rgba(28,30,44,.87)', marginBottom: 18}}>{window.t('tag_filters')}</div>
+
+            {/* Exam Scope Range */}
+            <div style={{marginBottom: 20}}>
+              <div style={{fontFamily: 'Roboto', fontSize: 11, fontWeight: 600, color: 'rgba(28,30,44,.45)', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 10}}>{window.t('exam_scope_range')}</div>
+              {examRanges.map((range, i) => (
+                <div key={i} style={{display: 'flex', alignItems: 'center', gap: 10, marginBottom: i < examRanges.length - 1 ? 10 : 0}}>
+                  <FilterInput label={window.t('from')} type="number" value={range.from} onChange={(v) => updateRange(i, 'from', v)} placeholder="1"/>
+                  <FilterInput label={window.t('to')}   type="number" value={range.to}   onChange={(v) => updateRange(i, 'to', v)}   placeholder="5"/>
+                  {examRanges.length > 1 ? (
+                    <button onClick={() => removeRange(i)} style={{width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'rgba(209,56,66,.08)', color: '#D13842', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, fontSize: 18}}>×</button>
+                  ) : (
+                    <button onClick={addRange} style={{width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'rgba(57,90,210,.1)', color: '#395AD2', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, fontSize: 20, fontWeight: 300}}>+</button>
+                  )}
+                </div>
+              ))}
+              {examRanges.length > 1 && (
+                <button onClick={addRange} style={{marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', color: '#395AD2', fontFamily: 'Roboto', fontWeight: 600, fontSize: 13, cursor: 'pointer', padding: 0}}>
+                  <span style={{width: 20, height: 20, borderRadius: '50%', background: 'rgba(57,90,210,.1)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 300}}>+</span>
+                  {window.t('add_range')}
+                </button>
+              )}
+            </div>
+
+            {/* Mode */}
+            <div style={{marginBottom: 20}}>
+              <div style={{fontFamily: 'Roboto', fontSize: 11, fontWeight: 600, color: 'rgba(28,30,44,.45)', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 10}}>{window.t('mode')}</div>
+              <FilterInput label={window.t('mode')} value={mode} onChange={setMode} placeholder={window.t('mode_placeholder')}/>
+            </div>
+
+            {/* Level */}
+            <div>
+              <div style={{fontFamily: 'Roboto', fontSize: 11, fontWeight: 600, color: 'rgba(28,30,44,.45)', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 10}}>{window.t('level')}</div>
+              <FilterInput label={window.t('level')} value={level} onChange={setLevel} placeholder={window.t('level_placeholder')}/>
+            </div>
+          </div>
+        </div>
+        <div style={{flexShrink: 0, padding: '12px 16px 14px', background: '#fff', borderTop: '1px solid rgba(28,30,44,.08)', boxShadow: '0 -6px 16px rgba(0,0,0,.04)', display: 'flex', gap: 12}}>
+          <Button kind="secondary" onClick={reset} style={{flex: 1}}>{window.t('reset')}</Button>
+          <Button onClick={() => onApply(buildFilter())} style={{flex: 2}}>{window.t('apply')}</Button>
+        </div>
+      </div>
+    );
+  }
+
   // ========= Main configure screen =========
   function ConfigureScreen({ onBack, onReview }) {
+    window.useLang();
+    const LangToggle = window.MnbLangToggle;
     const course = window.PRACTICE_COURSE;
-    const guidedSet = window.PRACTICE_GUIDED_SET;
+
+    // Flat selection map: { [id]: { count, kind } }
+    // Checking a parent removes descendant selections; checking a child removes ancestor selections.
     const [selection, setSelection] = useState({});
-    const [openMap, setOpenMap] = useState({});
-    const [guidedOnly, setGuidedOnly] = useState(false);
+    const [openMap, setOpenMap]     = useState({});
+    const [activeFilter, setActiveFilter] = useState(EMPTY_FILTER);
+    const [showFilter, setShowFilter]     = useState(false);
 
-    const guidedLoIds = new Set(guidedSet ? guidedSet.loIds : []);
-    const displayBooks = (guidedOnly && guidedSet)
-      ? course.books.map(book => ({
-          ...book,
-          chapters: book.chapters
-            .map(ch => ({
-              ...ch,
-              topics: ch.topics
-                .map(t => ({ ...t, los: t.los.filter(lo => guidedLoIds.has(lo.id)) }))
-                .filter(t => t.los.length > 0),
-            }))
-            .filter(ch => ch.topics.length > 0),
-        })).filter(book => book.chapters.length > 0)
-      : course.books;
+    // ---- cascade helpers ----
+    const getDescendants = (id, kind) => {
+      const items = [];
+      if (kind === 'book') {
+        const book = course.books.find(b => b.id === id);
+        if (!book) return items;
+        book.chapters.forEach(ch => {
+          items.push({id: ch.id, kind: 'chapter', avail: ch.available});
+          ch.topics.forEach(t => {
+            items.push({id: t.id, kind: 'topic', avail: t.available});
+            t.los.forEach(lo => items.push({id: lo.id, kind: 'lo', avail: lo.available}));
+          });
+        });
+      } else if (kind === 'chapter') {
+        for (const b of course.books) {
+          const ch = b.chapters.find(c => c.id === id);
+          if (ch) {
+            ch.topics.forEach(t => {
+              items.push({id: t.id, kind: 'topic', avail: t.available});
+              t.los.forEach(lo => items.push({id: lo.id, kind: 'lo', avail: lo.available}));
+            });
+            break;
+          }
+        }
+      } else if (kind === 'topic') {
+        for (const b of course.books) {
+          for (const ch of b.chapters) {
+            const t = ch.topics.find(tp => tp.id === id);
+            if (t) { t.los.forEach(lo => items.push({id: lo.id, kind: 'lo', avail: lo.available})); break; }
+          }
+        }
+      }
+      return items;
+    };
 
-    const totalSelected = Object.values(selection).reduce((a, v) => a + (v.count || 0), 0);
-    const booksSelected = Object.values(selection).filter(v => v.kind === 'book').length;
+    const getAncestors = (id, kind) => {
+      const items = [];
+      if (kind === 'lo') {
+        for (const b of course.books) for (const ch of b.chapters) for (const t of ch.topics) {
+          if (t.los.find(lo => lo.id === id)) {
+            items.push({id: t.id, kind: 'topic'}, {id: ch.id, kind: 'chapter'}, {id: b.id, kind: 'book'});
+          }
+        }
+      } else if (kind === 'topic') {
+        for (const b of course.books) for (const ch of b.chapters) {
+          if (ch.topics.find(t => t.id === id)) items.push({id: ch.id, kind: 'chapter'}, {id: b.id, kind: 'book'});
+        }
+      } else if (kind === 'chapter') {
+        for (const b of course.books) {
+          if (b.chapters.find(ch => ch.id === id)) items.push({id: b.id, kind: 'book'});
+        }
+      }
+      return items;
+    };
 
-    const onBookChange = (bookId, bookData) => {
+    const isChecked      = (id) => !!selection[id];
+    const isIndeterminate = (id, kind) => {
+      if (selection[id]) return false;
+      return getDescendants(id, kind).some(d => !!selection[d.id]);
+    };
+
+    const toggle = (id, kind, available) => {
       setSelection(prev => {
         const next = {...prev};
-        if (!bookData) {
-          delete next[bookId];
+        if (next[id]) {
+          // deselect this item and all descendants
+          delete next[id];
+          getDescendants(id, kind).forEach(d => delete next[d.id]);
         } else {
-          const book = course.books.find(b => b.id === bookId);
-          next[bookId] = {
-            count: bookData.count,
-            kind: 'book',
-            parent: { bookId, title: book.title, code: book.code },
-          };
+          // select: remove ancestor and descendant conflicts first
+          getAncestors(id, kind).forEach(a => delete next[a.id]);
+          getDescendants(id, kind).forEach(d => delete next[d.id]);
+          next[id] = { count: available, kind };
         }
         return next;
       });
     };
 
+    const updateCount = (id, count) =>
+      setSelection(prev => ({...prev, [id]: {...prev[id], count}}));
+
+    const toggleOpen = (id) => setOpenMap(m => ({...m, [id]: !m[id]}));
+
+    // Selection context passed through the component tree
+    const selCtx = { selection, isChecked, isIndeterminate, toggle, updateCount, toggleOpen };
+
+    // ---- filter logic ----
+    const hasFilter = activeFilter.examRanges.length > 0 || !!activeFilter.mode || !!activeFilter.level;
+
+    const loMatchesFilter = (lo, f) => {
+      const tags = lo.tags || {};
+      if (f.examRanges.length > 0) {
+        const loScopes = tags.examScope || [];
+        const ok = f.examRanges.some(r => {
+          const from = r.from !== '' ? Number(r.from) : 1;
+          const to   = r.to   !== '' ? Number(r.to)   : 5;
+          return loScopes.some(s => s >= from && s <= to);
+        });
+        if (!ok) return false;
+      }
+      if (f.mode  && !(tags.mode  || '').toLowerCase().includes(f.mode.toLowerCase()))  return false;
+      if (f.level && !(tags.level || '').toLowerCase().includes(f.level.toLowerCase())) return false;
+      return true;
+    };
+
+    const buildDisplayBooks = (f) => {
+      const hasF = f.examRanges.length > 0 || f.mode || f.level;
+      return hasF
+        ? course.books.map(book => ({
+            ...book,
+            chapters: book.chapters
+              .map(ch => ({
+                ...ch,
+                topics: ch.topics
+                  .map(t => ({ ...t, los: t.los.filter(lo => loMatchesFilter(lo, f)) }))
+                  .filter(t => t.los.length > 0),
+              }))
+              .filter(ch => ch.topics.length > 0),
+          })).filter(b => b.chapters.length > 0)
+        : course.books;
+    };
+
+    const displayBooks = buildDisplayBooks(activeFilter);
+
+    // When filter is applied, auto-select matching LOs from the two default topics
+    const DEFAULT_TOPIC_IDS = new Set(['t1-1', 't4-2']);
+    const applyFilter = (f) => {
+      setActiveFilter(f);
+      setShowFilter(false);
+      const hasF = f.examRanges.length > 0 || f.mode || f.level;
+      if (!hasF) return;
+      const newSel = {};
+      course.books.forEach(b => b.chapters.forEach(ch => ch.topics.forEach(t => {
+        if (!DEFAULT_TOPIC_IDS.has(t.id)) return;
+        t.los.forEach(lo => {
+          if (loMatchesFilter(lo, f)) newSel[lo.id] = { count: lo.available, kind: 'lo' };
+        });
+      })));
+      setSelection(newSel);
+    };
+
+    // ---- summary ----
+    const totalSelected   = Object.values(selection).reduce((a, v) => a + (v.count || 0), 0);
+    const itemsSelected   = Object.keys(selection).length;
+    const hasAnySelection = itemsSelected > 0;
+
     const selectAllBooks = () => {
       setSelection(prev => {
         const next = {...prev};
         displayBooks.forEach(b => {
-          if (!next[b.id]) {
-            next[b.id] = { count: Math.min(10, b.available), kind: 'book', parent: { bookId: b.id, title: b.title, code: b.code } };
-          }
+          if (!next[b.id]) next[b.id] = { count: b.available, kind: 'book' };
         });
         return next;
       });
     };
-
     const clearSelection = () => setSelection({});
 
-    const toggleOpen = (id) => setOpenMap(m => ({...m, [id]: !m[id]}));
+    // Filter pill text
+    const filterParts = [];
+    if (activeFilter.examRanges.length > 0)
+      filterParts.push(`Scope ${activeFilter.examRanges.map(r => `${r.from || 1}–${r.to || 5}`).join(', ')}`);
+    if (activeFilter.mode)  filterParts.push(activeFilter.mode);
+    if (activeFilter.level) filterParts.push(activeFilter.level);
+
+    const filterBtn = (
+      <button
+        onClick={() => setShowFilter(true)}
+        style={{
+          position: 'relative', width: 32, height: 32, borderRadius: 8, border: 'none',
+          background: hasFilter ? '#EAF1FF' : 'transparent',
+          boxShadow: hasFilter ? 'inset 0 0 0 1px rgba(57,90,210,.25)' : 'inset 0 0 0 1px rgba(28,30,44,.12)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+        }}>
+        <Icon.filter size={18} color={hasFilter ? '#395AD2' : 'rgba(28,30,44,.6)'}/>
+        {hasFilter && <div style={{position: 'absolute', top: -4, right: -4, width: 8, height: 8, borderRadius: '50%', background: '#395AD2'}}/>}
+      </button>
+    );
 
     return (
-      <div style={{flex: 1, background: '#F2F2F4', display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
-        <TopBar title="Create Practice Set" onBack={onBack}/>
+      <div style={{flex: 1, background: '#F2F2F4', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative'}}>
+        <TopBar title={window.t('create_practice_set')} onBack={onBack} right={
+          <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+            {LangToggle && <LangToggle/>}
+            {filterBtn}
+          </div>
+        }/>
 
-        {/* Summary + course label */}
-        <div style={{
-          background: '#fff', padding: '12px 16px 14px',
-          borderBottom: '1px solid rgba(28,30,44,.08)', flexShrink: 0,
-        }}>
+        {/* Summary header */}
+        <div style={{background: '#fff', padding: '12px 16px 14px', borderBottom: '1px solid rgba(28,30,44,.08)', flexShrink: 0}}>
           <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
             <div style={{flex: 1}}>
               <div style={{display: 'flex', alignItems: 'baseline', gap: 6}}>
                 <span style={{fontFamily: 'Roboto', fontWeight: 900, fontSize: 28, color: '#395AD2', letterSpacing: -.5, fontVariantNumeric: 'tabular-nums'}}>{totalSelected}</span>
-                <span style={{fontFamily: 'Roboto', fontSize: 12, color: 'rgba(28,30,44,.6)'}}>
-                  question{totalSelected === 1 ? '' : 's'} total
-                </span>
+                <span style={{fontFamily: 'Roboto', fontSize: 12, color: 'rgba(28,30,44,.6)'}}>{window.t(totalSelected === 1 ? 'question_total' : 'questions_total')}</span>
               </div>
               <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.55)', marginTop: 2}}>
-                {booksSelected} book{booksSelected === 1 ? '' : 's'} selected
+                {itemsSelected} {window.t(itemsSelected === 1 ? 'item_selected' : 'items_selected')}
               </div>
             </div>
             <button
-              onClick={booksSelected ? clearSelection : selectAllBooks}
-              style={{
-                border: 'none', background: 'transparent', color: '#395AD2',
-                fontFamily: 'Roboto', fontWeight: 600, fontSize: 13, cursor: 'pointer',
-              }}>
-              {booksSelected ? 'Clear' : 'Select all'}
+              onClick={hasAnySelection ? clearSelection : selectAllBooks}
+              style={{border: 'none', background: 'transparent', color: '#395AD2', fontFamily: 'Roboto', fontWeight: 600, fontSize: 13, cursor: 'pointer'}}>
+              {hasAnySelection ? window.t('clear') : window.t('select_all')}
             </button>
           </div>
 
-          {/* Course name */}
-          <div style={{
-            marginTop: 12, padding: '9px 12px', borderRadius: 10,
-            background: '#F2F2F4', display: 'flex', alignItems: 'center', gap: 10,
-          }}>
+          <div style={{marginTop: 12, padding: '9px 12px', borderRadius: 10, background: '#F2F2F4', display: 'flex', alignItems: 'center', gap: 10}}>
             <Icon.book color="#395AD2" size={16}/>
             <div style={{minWidth: 0}}>
               <div style={{fontFamily: 'Roboto', fontSize: 10, color: 'rgba(28,30,44,.45)', letterSpacing: .4, textTransform: 'uppercase'}}>{course.code}</div>
@@ -300,63 +587,54 @@
             </div>
           </div>
 
-          <div style={{
-            marginTop: 10, padding: '8px 10px', borderRadius: 8,
-            background: '#F2F6FF', display: 'flex', alignItems: 'flex-start', gap: 8,
-          }}>
+          <div style={{marginTop: 10, padding: '8px 10px', borderRadius: 8, background: '#F2F6FF', display: 'flex', alignItems: 'flex-start', gap: 8}}>
             <Icon.sparkle color="#395AD2" size={14}/>
             <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.75)', lineHeight: 1.45}}>
-              Questions are drawn <strong>randomly</strong> from all topics within each selected book, up to the number you set per book.
+              {window.t('random_hint')}
             </div>
           </div>
         </div>
 
-        {/* List */}
-        <div style={{flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 16px 16px'}}>
-          {guidedSet && (
-            <div style={{
-              background: '#fff', borderRadius: 12, marginBottom: 12,
-              border: guidedOnly ? '1.5px solid rgba(57,90,210,.3)' : '1px solid rgba(28,30,44,.1)',
-              padding: '11px 14px', display: 'flex', alignItems: 'center', gap: 12,
-              boxShadow: guidedOnly ? '0 3px 10px rgba(57,90,210,.08)' : 'none',
-              transition: 'border-color .2s, box-shadow .2s',
-            }}>
-              <Icon.target color={guidedOnly ? '#395AD2' : 'rgba(28,30,44,.4)'} size={18}/>
-              <div style={{flex: 1, minWidth: 0}}>
-                <div style={{fontFamily: 'Roboto', fontWeight: 600, fontSize: 13, color: guidedOnly ? '#395AD2' : 'rgba(28,30,44,.87)'}}>
-                  Guided learning set
-                </div>
-                <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.5)', marginTop: 1}}>
-                  {guidedSet.name} · {guidedSet.loIds.length} learning objectives
-                </div>
-              </div>
-              <Toggle value={guidedOnly} onChange={setGuidedOnly}/>
+        {/* Active filter pill */}
+        {hasFilter && (
+          <div style={{flexShrink: 0, padding: '8px 16px 0'}}>
+            <div style={{padding: '7px 12px', borderRadius: 8, background: '#EAF1FF', border: '1px solid rgba(57,90,210,.2)', display: 'flex', alignItems: 'center', gap: 8}}>
+              <Icon.filter size={13} color="#395AD2"/>
+              <span style={{fontFamily: 'Roboto', fontSize: 12, color: '#395AD2', flex: 1}}>{filterParts.join(' · ')}</span>
+              <button onClick={() => setActiveFilter(EMPTY_FILTER)} style={{border: 'none', background: 'transparent', color: '#395AD2', fontFamily: 'Roboto', fontWeight: 600, fontSize: 12, cursor: 'pointer', padding: 0}}>{window.t('clear')}</button>
             </div>
+          </div>
+        )}
+
+        {/* Book list */}
+        <div style={{flex: 1, minHeight: 0, overflowY: 'auto', padding: hasFilter ? '10px 16px 16px' : '12px 16px 16px'}}>
+          {displayBooks.length === 0 ? (
+            <div style={{textAlign: 'center', padding: '48px 24px'}}>
+              <div style={{fontFamily: 'Roboto', fontSize: 14, color: 'rgba(28,30,44,.4)', lineHeight: 1.6}}>{window.t('no_los_match')}</div>
+              <button onClick={() => setActiveFilter(EMPTY_FILTER)} style={{border: 'none', background: 'transparent', color: '#395AD2', fontFamily: 'Roboto', fontWeight: 600, fontSize: 14, cursor: 'pointer', marginTop: 8}}>{window.t('clear_filters')}</button>
+            </div>
+          ) : (
+            displayBooks.map(b => (
+              <BookSection key={b.id} book={b} selCtx={selCtx} openMap={openMap}/>
+            ))
           )}
-          {displayBooks.map(b => (
-            <BookSection
-              key={b.id}
-              book={b}
-              bookEntry={selection[b.id]}
-              onBookChange={onBookChange}
-              openMap={openMap}
-              onToggle={toggleOpen}
-            />
-          ))}
         </div>
 
         {/* Bottom CTA */}
-        <div style={{
-          flexShrink: 0, padding: '12px 16px 14px',
-          background: '#fff', borderTop: '1px solid rgba(28,30,44,.08)',
-          boxShadow: '0 -6px 16px rgba(0,0,0,.04)',
-        }}>
+        <div style={{flexShrink: 0, padding: '12px 16px 14px', background: '#fff', borderTop: '1px solid rgba(28,30,44,.08)', boxShadow: '0 -6px 16px rgba(0,0,0,.04)'}}>
           <Button full size="md" disabled={totalSelected === 0} onClick={() => onReview(selection)}>
-            {totalSelected === 0
-              ? 'Select items to continue'
-              : `Review ${totalSelected} Question${totalSelected === 1 ? '' : 's'}`}
+            {totalSelected === 0 ? window.t('select_to_continue') : window.t('review_questions', totalSelected)}
           </Button>
         </div>
+
+        {/* Filter sheet */}
+        {showFilter && (
+          <FilterSheet
+            initialFilter={activeFilter}
+            onClose={() => setShowFilter(false)}
+            onApply={applyFilter}
+          />
+        )}
       </div>
     );
   }

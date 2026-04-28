@@ -3,9 +3,10 @@
   const { MnbTopBar: TopBar } = window;
 
   function CourseSelectScreen({ onSelectCourse }) {
+    window.useLang(); // re-render on language change
+    const LangToggle = window.MnbLangToggle;
     const course = window.PRACTICE_COURSE;
 
-    // Simulate multiple courses for a realistic list
     const courses = [
       course,
       { id: 'math-g9', code: 'MATH-G9', title: 'G9 Mathematics' },
@@ -14,14 +15,14 @@
 
     return (
       <div style={{flex: 1, background: '#F2F2F4', display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
-        <TopBar title="Practice"/>
+        <TopBar title={window.t('practice')} right={<LangToggle/>}/>
         <div style={{flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px 16px 24px'}}>
 
           <div style={{fontFamily: '"Noto Sans JP", Roboto', fontWeight: 700, fontSize: 15, color: 'rgba(28,30,44,.87)', marginBottom: 10}}>
-            Courses
+            {window.t('courses')}
           </div>
 
-          {courses.map((c, i) => (
+          {courses.map((c) => (
             <div
               key={c.id}
               onClick={() => onSelectCourse(c)}

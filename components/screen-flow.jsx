@@ -5,6 +5,8 @@
 
   // ========== REVIEW SCREEN ==========
   function ReviewScreen({ selection, onBack, onStart, onEdit }) {
+    window.useLang();
+    const LangToggle = window.MnbLangToggle;
     const course = window.PRACTICE_COURSE;
 
     // Build rows: book-kind entries first, then LO-kind entries grouped by chapter.
@@ -34,7 +36,7 @@
 
     return (
       <div style={{flex: 1, background: '#F2F2F4', display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
-        <TopBar title="Review Practice Set" onBack={onBack}/>
+        <TopBar title={window.t('review_practice_set')} onBack={onBack} right={LangToggle && <LangToggle/>}/>
         <div style={{flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px 16px 16px'}}>
           {/* Big summary */}
           <div style={{
@@ -45,10 +47,10 @@
           }}>
             <div style={{position: 'absolute', right: -20, top: -20, width: 120, height: 120, borderRadius: '50%', background: 'rgba(28,183,235,.25)'}}/>
             <div style={{position: 'relative'}}>
-              <div style={{fontFamily: 'Roboto', fontSize: 11, letterSpacing: .4, textTransform: 'uppercase', opacity: .8}}>Your practice set</div>
+              <div style={{fontFamily: 'Roboto', fontSize: 11, letterSpacing: .4, textTransform: 'uppercase', opacity: .8}}>{window.t('your_practice_set')}</div>
               <div style={{display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4}}>
                 <span style={{fontFamily: 'Roboto', fontWeight: 900, fontSize: 44, letterSpacing: -1}}>{total}</span>
-                <span style={{fontFamily: 'Roboto', fontSize: 14, opacity: .85}}>questions</span>
+                <span style={{fontFamily: 'Roboto', fontSize: 14, opacity: .85}}>{window.t('questions')}</span>
               </div>
               <div style={{display: 'flex', gap: 16, marginTop: 10, fontFamily: 'Roboto', fontSize: 12, opacity: .9}}>
                 <div style={{display: 'flex', alignItems: 'center', gap: 4}}>
@@ -76,7 +78,7 @@
                       <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.55)', letterSpacing: .3, textTransform: 'uppercase'}}>{r.book.code}</div>
                       <div style={{fontFamily: '"Noto Sans JP", Roboto', fontWeight: 700, fontSize: 14, color: 'rgba(28,30,44,.87)', marginTop: 2}}>{r.book.title}</div>
                       <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.55)', marginTop: 4}}>
-                        {r.topicCount} topic{r.topicCount === 1 ? '' : 's'} selected
+                        {r.topicCount} {window.t(r.topicCount === 1 ? 'topic_selected' : 'topics_selected')}
                       </div>
                     </div>
                     <div style={{padding: '4px 10px', borderRadius: 999, background: '#EAF1FF', color: '#395AD2', fontFamily: 'Roboto', fontWeight: 700, fontSize: 12, flexShrink: 0}}>{r.count} Qs</div>
@@ -118,7 +120,7 @@
         </div>
 
         <div style={{flexShrink: 0, padding: '12px 16px 14px', background: '#fff', borderTop: '1px solid rgba(28,30,44,.08)', boxShadow: '0 -6px 16px rgba(0,0,0,.04)'}}>
-          <Button full size="md" onClick={() => onStart({selection, total})}>Start Practice</Button>
+          <Button full size="md" onClick={() => onStart({selection, total})}>{window.t('start_practice')}</Button>
         </div>
       </div>
     );
@@ -126,6 +128,7 @@
 
   // ========== PRACTICE (MCQ) SCREEN ==========
   function PracticeScreen({ total, onFinish, onBack }) {
+    window.useLang();
     const qs = window.PRACTICE_QUESTIONS;
     const [idx, setIdx] = useState(0);
     const [answers, setAnswers] = useState({}); // idx -> choiceIdx
@@ -145,7 +148,7 @@
     // Build the indicators (answered / current / default)
     return (
       <div style={{flex: 1, background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
-        <TopBar title={`Question ${idx + 1} of ${total}`} onBack={onBack} right={
+        <TopBar title={window.t('question_of', idx + 1, total)} onBack={onBack} right={
           <div style={{display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'Roboto', fontWeight: 500, fontSize: 13, color: 'rgba(28,30,44,.6)'}}>
           </div>
         }/>
@@ -206,9 +209,9 @@
         </div>
 
         <div style={{flexShrink: 0, padding: '12px 16px', background: '#fff', borderTop: '1px solid rgba(28,30,44,.08)', display: 'flex', gap: 10}}>
-          <Button kind="secondary" onClick={prev} disabled={idx === 0} style={{minWidth: 80}}>Back</Button>
+          <Button kind="secondary" onClick={prev} disabled={idx === 0} style={{minWidth: 80}}>{window.t('prev')}</Button>
           <Button full size="md" disabled={picked === null} onClick={next}>
-            {idx === total - 1 ? 'Submit' : 'Next'}
+            {idx === total - 1 ? 'Submit' : window.t('next')}
           </Button>
         </div>
       </div>
@@ -217,6 +220,7 @@
 
   // ========== SUBMITTED (matching the uploaded reference) ==========
   function SubmittedScreen({ onNext, total, score = 72 }) {
+    window.useLang();
     return (
       <div style={{flex: 1, background: '#395AD2', display: 'flex', flexDirection: 'column', overflow: 'hidden', color: '#fff', position: 'relative'}}>
         {/* Deco shapes */}
@@ -249,7 +253,7 @@
           {/* Optional stats preview */}
           <div style={{marginTop: 28, display: 'flex', gap: 10}}>
             <div style={{background: 'rgba(255,255,255,.12)', borderRadius: 10, padding: '10px 14px', minWidth: 80}}>
-              <div style={{fontFamily: 'Roboto', fontSize: 11, opacity: .8}}>Questions</div>
+              <div style={{fontFamily: 'Roboto', fontSize: 11, opacity: .8}}>{window.t('questions')}</div>
               <div style={{fontFamily: 'Roboto', fontWeight: 700, fontSize: 20, marginTop: 2}}>{total}</div>
             </div>
             <div style={{background: 'rgba(255,255,255,.12)', borderRadius: 10, padding: '10px 14px', minWidth: 80}}>
@@ -260,7 +264,7 @@
         </div>
 
         <div style={{padding: '20px 24px 28px', display: 'flex', justifyContent: 'flex-end'}}>
-          <Button kind="white" size="md" onClick={onNext} style={{minWidth: 140}}>Next</Button>
+          <Button kind="white" size="md" onClick={onNext} style={{minWidth: 140}}>{window.t('next')}</Button>
         </div>
       </div>
     );
