@@ -134,7 +134,7 @@
       start_practice: '練習を開始',
 
       // Practice screen
-      question_of: (i, n) => `${i} / ${n}問目`,
+      question_of: (i, n) => `${i} / ${n}アイテム`,
       next: '次へ',
       prev: '前へ',
 
