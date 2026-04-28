@@ -83,8 +83,8 @@
       recent_practice_sets: '最近の練習セット',
 
       // Configure — header
-      questions_total: '問題合計',
-      question_total: '問題合計',
+      questions_total: 'アイテム合計',
+      question_total: 'アイテム合計',
       items_selected: '項目選択済み',
       item_selected: '項目選択済み',
       select_all: 'すべて選択',
@@ -95,7 +95,7 @@
       chapter: '章',
       topics: 'トピック',
       topic: 'トピック',
-      questions: '問題',
+      questions: 'アイテム',
       los: '学習目標',
       scope: 'スコープ',
       topics_selected: 'トピック選択済み',
@@ -110,7 +110,7 @@
 
       // Configure — CTA
       select_to_continue: '項目を選択して続ける',
-      review_questions: (n) => `${n}問題を確認`,
+      review_questions: (n) => `${n}アイテムを確認`,
 
       // Filter sheet
       filter: 'フィルター',
