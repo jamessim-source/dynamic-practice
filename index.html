@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Dynamic Practice Questions — Manabie Learner</title>
+<link rel="stylesheet" href="assets/colors_and_type.css"/>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #E9EBF1; }
+  body {
+    font-family: "Roboto", "Noto Sans JP", system-ui, -apple-system, sans-serif;
+    color: rgba(28, 30, 44, 0.87);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #stage {
+    width: 100vw; height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at 50% 40%, #F4F6FA 0%, #E4E7EF 70%);
+    padding: 32px; box-sizing: border-box; position: relative;
+  }
+  .scene-label {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    font-family: Roboto; font-size: 12px; color: rgba(28,30,44,.5);
+    letter-spacing: .5px; text-transform: uppercase;
+  }
+  /* Tweaks panel */
+  .tweaks-panel {
+    position: fixed; right: 20px; bottom: 20px;
+    background: #fff; border-radius: 14px; padding: 16px;
+    box-shadow: 0 14px 40px rgba(0,0,0,.16);
+    border: 1px solid rgba(28,30,44,.08);
+    width: 240px; font-family: Roboto;
+    display: none; z-index: 100;
+  }
+  .tweaks-panel.open { display: block; }
+  .tweaks-panel h3 { margin: 0 0 12px; font-size: 14px; font-weight: 700; color: rgba(28,30,44,.87); display: flex; align-items: center; justify-content: space-between;}
+  .tweaks-panel label { font-size: 11px; color: rgba(28,30,44,.6); text-transform: uppercase; letter-spacing: .3px; display: block; margin: 12px 0 6px;}
+  .tweaks-panel .seg { display: flex; gap: 4px; background: #F2F2F4; border-radius: 8px; padding: 3px; }
+  .tweaks-panel .seg button { flex: 1; border: none; background: transparent; padding: 6px 8px; border-radius: 6px; font-family: Roboto; font-size: 12px; color: rgba(28,30,44,.72); cursor: pointer; font-weight: 500; }
+  .tweaks-panel .seg button.active { background: #fff; color: #395AD2; font-weight: 700; box-shadow: 0 2px 6px rgba(0,0,0,.06);}
+  .screen-tabs {
+    position: fixed; top: 20px; right: 20px;
+    display: flex; flex-direction: column; gap: 4px; background: rgba(255,255,255,.92);
+    backdrop-filter: blur(10px);
+    padding: 6px; border-radius: 12px; font-family: Roboto;
+    box-shadow: 0 4px 14px rgba(0,0,0,.08);
+    z-index: 50; min-width: 128px;
+  }
+  .screen-tabs button {
+    border: none; background: transparent; padding: 7px 12px; border-radius: 8px;
+    font-size: 12px; font-weight: 600; color: rgba(28,30,44,.7); cursor: pointer;
+    text-align: left; white-space: nowrap;
+  }
+  .screen-tabs button.active { background: #395AD2; color: #fff; }
+  .close-x { border: none; background: #F2F2F4; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-family: Roboto; font-size: 14px; color: rgba(28,30,44,.72); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="root"></div>
+</div>
+
+<!-- Screen tabs (always visible) -->
+<div class="screen-tabs" id="screenTabs"></div>
+
+<!-- Tweaks panel -->
+<div class="tweaks-panel" id="tweaksPanel">
+  <h3>Tweaks <button class="close-x" onclick="document.getElementById('tweaksPanel').classList.remove('open')">×</button></h3>
+  <label>Jump to screen</label>
+  <div class="seg" id="tweak-screen">
+    <button data-v="landing">Landing</button>
+    <button data-v="home">Home</button>
+    <button data-v="configure" class="active">Config</button>
+    <button data-v="review">Review</button>
+  </div>
+  <label>Continue flow</label>
+  <div class="seg" id="tweak-screen2">
+    <button data-v="practice">Practice</button>
+    <button data-v="submitted">Submitted</button>
+  </div>
+</div>
+
+<!-- React + Babel -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="components/primitives.jsx"></script>
+<script type="text/babel" src="components/translations.jsx"></script>
+<script type="text/babel" src="components/data.jsx"></script>
+<script type="text/babel" src="components/screen-landing.jsx"></script>
+<script type="text/babel" src="components/screen-home.jsx"></script>
+<script type="text/babel" src="components/screen-configure.jsx"></script>
+<script type="text/babel" src="components/screen-flow.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// ========== TWEAKS ==========
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{}/*EDITMODE-END*/;
+
+function App() {
+  const [screen, setScreen] = useState(() => {
+    try { return localStorage.getItem('dpq_screen') || 'landing'; } catch (e) { return 'landing'; }
+  });
+  const [selection, setSelection] = useState({});
+  const [practiceMeta, setPracticeMeta] = useState({ total: 10, name: '' });
+
+  useEffect(() => {
+    try { localStorage.setItem('dpq_screen', screen); } catch (e) {}
+  }, [screen]);
+
+  // Edit-mode protocol
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.type === '__activate_edit_mode') document.getElementById('tweaksPanel').classList.add('open');
+      if (e.data?.type === '__deactivate_edit_mode') document.getElementById('tweaksPanel').classList.remove('open');
+    };
+    window.addEventListener('message', handler);
+    window.parent.postMessage({type: '__edit_mode_available'}, '*');
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
+  // Wire tweak buttons
+  useEffect(() => {
+    const wire = (groupId, cb) => {
+      const group = document.getElementById(groupId);
+      if (!group) return;
+      group.querySelectorAll('button[data-v]').forEach(b => {
+        b.onclick = () => {
+          group.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+          b.classList.add('active');
+          cb(b.dataset.v);
+        };
+      });
+    };
+    wire('tweak-screen', (v) => setScreen(v));
+    wire('tweak-screen2', (v) => setScreen(v));
+  });
+
+  // Build tabs based on currently-active screen
+  useEffect(() => {
+    const tabs = document.getElementById('screenTabs');
+    const screens = [
+      ['landing', '1 · Landing'],
+      ['home', '2 · Course'],
+      ['configure', '3 · Configure'],
+      ['review', '4 · Review'],
+      ['practice', '5 · Practice'],
+      ['submitted', '6 · Submitted'],
+    ];
+    tabs.innerHTML = screens.map(([k, l]) => `<button data-v="${k}" class="${screen === k ? 'active' : ''}">${l}</button>`).join('');
+    tabs.querySelectorAll('button').forEach(b => {
+      b.onclick = () => setScreen(b.dataset.v);
+    });
+  }, [screen]);
+
+  const { MnbCourseSelectScreen, MnbCourseHomeScreen, MnbConfigureScreen, MnbReviewScreen, MnbPracticeScreen, MnbSubmittedScreen } = window;
+  const IOSDevice = window.IOSDevice;
+
+  let content;
+  if (screen === 'landing') {
+    content = <MnbCourseSelectScreen onSelectCourse={() => setScreen('home')}/>;
+  } else if (screen === 'home') {
+    content = <MnbCourseHomeScreen onBack={() => setScreen('landing')} onCreatePractice={() => setScreen('configure')} onOpenPastSet={() => {}}/>;
+  } else if (screen === 'configure') {
+    content = <MnbConfigureScreen
+      onBack={() => setScreen('home')}
+      onReview={(sel) => { setSelection(sel); setScreen('review'); }}
+    />;
+  } else if (screen === 'review') {
+    // If no selection yet, build a sensible default so review looks populated.
+    // Mix of topic-scoped and LO-scoped rows so the review demo shows both.
+    const sel = Object.keys(selection).length ? selection : {
+      'bk1': { count: 10, kind: 'book', parent: { bookId: 'bk1', title: 'Foundations of English', code: 'Book 1' } },
+      'bk2': { count: 5, kind: 'book', parent: { bookId: 'bk2', title: 'Advanced Literary Studies', code: 'Book 2' } },
+      'lo1-2-a': { count: 3, kind: 'lo', parent: { chapterId: 'ch1', code: 'Chapter 1', chapterTitle: 'Reading Comprehension', topicId: 't1-2', topicTitle: 'Inference from Context', title: 'Draw conclusions from textual evidence', loCode: 'LO 1.2.a' } },
+    };
+    content = <MnbReviewScreen
+      selection={sel}
+      onBack={() => setScreen('configure')}
+      onEdit={() => setScreen('configure')}
+      onStart={(meta) => { setPracticeMeta(meta); setScreen('practice'); }}
+    />;
+  } else if (screen === 'practice') {
+    content = <MnbPracticeScreen
+      total={practiceMeta.total || 10}
+      onBack={() => setScreen('review')}
+      onFinish={() => setScreen('submitted')}
+    />;
+  } else {
+    content = <MnbSubmittedScreen total={practiceMeta.total || 10} onNext={() => setScreen('home')}/>;
+  }
+
+  return (
+    <IOSDevice dark={screen === 'submitted'}>
+        {/* Submitted is a dark full-bleed scene — keep its original behavior */}
+        <div style={{position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingTop: 54}}>
+          {content}
+        </div>
+    </IOSDevice>
+  );
+}
+
+// Wait for all dependency scripts to transpile and register
+function boot() {
+  if (!window.MnbCourseSelectScreen || !window.MnbConfigureScreen || !window.IOSDevice) {
+    return setTimeout(boot, 40);
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+}
+boot();
+</script>
+</body>
+</html>
