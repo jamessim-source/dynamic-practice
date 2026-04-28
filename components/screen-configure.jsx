@@ -348,19 +348,26 @@
             {/* Level */}
             <div>
               <div style={{fontFamily: 'Roboto', fontSize: 11, fontWeight: 600, color: 'rgba(28,30,44,.45)', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 10}}>{window.t('level')}</div>
-              <div style={{display: 'flex', gap: 8}}>
-                {['easy', 'medium', 'difficult'].map(v => {
-                  const active = level === v;
-                  return (
-                    <button key={v} onClick={() => setLevel(active ? '' : v)} style={{
-                      flex: 1, padding: '10px 0', borderRadius: 10, border: 'none',
-                      background: active ? '#395AD2' : '#F2F2F4',
-                      color: active ? '#fff' : 'rgba(28,30,44,.72)',
-                      fontFamily: 'Roboto', fontWeight: 600, fontSize: 13,
-                      cursor: 'pointer', transition: 'all .15s',
-                    }}>{window.t('level_' + v)}</button>
-                  );
-                })}
+              <div style={{
+                borderRadius: 10, border: '1.5px solid rgba(28,30,44,.14)',
+                background: '#fff', overflow: 'hidden',
+              }}>
+                <select
+                  value={level}
+                  onChange={(e) => setLevel(e.target.value)}
+                  style={{
+                    width: '100%', padding: '12px 13px', border: 'none', outline: 'none',
+                    fontFamily: 'Roboto', fontSize: 15, color: level ? 'rgba(28,30,44,.87)' : 'rgba(28,30,44,.4)',
+                    background: 'transparent', cursor: 'pointer', appearance: 'none',
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 9l6 6 6-6' stroke='rgba(28,30,44,.45)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center',
+                    paddingRight: 36,
+                  }}>
+                  <option value="">—</option>
+                  <option value="easy">{window.t('level_easy')}</option>
+                  <option value="medium">{window.t('level_medium')}</option>
+                  <option value="difficult">{window.t('level_difficult')}</option>
+                </select>
               </div>
             </div>
           </div>
