@@ -53,7 +53,9 @@
       apply: 'Apply',
       add_range: 'Add range',
       mode_placeholder: 'e.g. exam, standard, practice',
-      level_placeholder: 'e.g. foundation, intermediate, advanced',
+      level_easy: 'Easy',
+      level_medium: 'Medium',
+      level_difficult: 'Difficult',
 
       // Review screen
       review_practice_set: 'Review Practice Set',
@@ -122,7 +124,9 @@
       apply: '適用',
       add_range: '範囲を追加',
       mode_placeholder: '例：exam、standard、practice',
-      level_placeholder: '例：foundation、intermediate、advanced',
+      level_easy: '易しい',
+      level_medium: '普通',
+      level_difficult: '難しい',
 
       // Review screen
       review_practice_set: '練習セットを確認',

@@ -348,7 +348,20 @@
             {/* Level */}
             <div>
               <div style={{fontFamily: 'Roboto', fontSize: 11, fontWeight: 600, color: 'rgba(28,30,44,.45)', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 10}}>{window.t('level')}</div>
-              <FilterInput label={window.t('level')} value={level} onChange={setLevel} placeholder={window.t('level_placeholder')}/>
+              <div style={{display: 'flex', gap: 8}}>
+                {['easy', 'medium', 'difficult'].map(v => {
+                  const active = level === v;
+                  return (
+                    <button key={v} onClick={() => setLevel(active ? '' : v)} style={{
+                      flex: 1, padding: '10px 0', borderRadius: 10, border: 'none',
+                      background: active ? '#395AD2' : '#F2F2F4',
+                      color: active ? '#fff' : 'rgba(28,30,44,.72)',
+                      fontFamily: 'Roboto', fontWeight: 600, fontSize: 13,
+                      cursor: 'pointer', transition: 'all .15s',
+                    }}>{window.t('level_' + v)}</button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -474,7 +487,7 @@
         if (!ok) return false;
       }
       if (f.mode  && !(tags.mode  || '').toLowerCase().includes(f.mode.toLowerCase()))  return false;
-      if (f.level && !(tags.level || '').toLowerCase().includes(f.level.toLowerCase())) return false;
+      if (f.level && tags.level !== f.level) return false;
       return true;
     };
 
