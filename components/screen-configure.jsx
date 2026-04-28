@@ -60,15 +60,21 @@
             {lo.title}
           </div>
           <div style={{display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4}}>
-            {(lo.tags?.examScope || []).map(s => (
-              <span key={s} style={{
-                padding: '1px 6px', borderRadius: 4,
-                background: checked ? 'rgba(57,90,210,.1)' : 'rgba(28,30,44,.06)',
-                color: checked ? '#395AD2' : 'rgba(28,30,44,.5)',
-                fontFamily: 'Roboto', fontSize: 10, fontWeight: 500, letterSpacing: .2,
-                whiteSpace: 'nowrap',
-              }}>{window.t('scope')} {s}</span>
-            ))}
+            {(() => {
+              const scopes = lo.tags?.examScope || [];
+              if (!scopes.length) return null;
+              const min = Math.min(...scopes), max = Math.max(...scopes);
+              const label = min === max ? `${window.t('scope')} ${min}` : `${window.t('scope')} ${min}–${max}`;
+              return (
+                <span style={{
+                  padding: '1px 6px', borderRadius: 4,
+                  background: checked ? 'rgba(57,90,210,.1)' : 'rgba(28,30,44,.06)',
+                  color: checked ? '#395AD2' : 'rgba(28,30,44,.5)',
+                  fontFamily: 'Roboto', fontSize: 10, fontWeight: 500, letterSpacing: .2,
+                  whiteSpace: 'nowrap',
+                }}>{label}</span>
+              );
+            })()}
             {(lo.labels || []).map(label => (
               <span key={label} style={{
                 padding: '1px 6px', borderRadius: 4,
