@@ -593,6 +593,7 @@
     const displayBooks = buildDisplayBooks(activeFilter);
 
     // ---- filter accordion state ----
+    const [filterSectionOpen, setFilterSectionOpen] = useState(true);
     const [openFilter, setOpenFilter] = useState(null);
     const toggleFilter   = (key) => setOpenFilter(k => k === key ? null : key);
     const addExamRange   = () => setActiveFilter(f => ({...f, examRanges: [...f.examRanges, {from:'',to:''}]}));
@@ -691,70 +692,96 @@
         </div>
 
         {/* Inline filters */}
-        <div style={{flexShrink: 0, background: '#F2F2F4', borderBottom: '1px solid rgba(28,30,44,.08)', padding: '10px 16px 4px'}}>
-          <div style={{display: 'flex', alignItems: 'center', marginBottom: 8}}>
-            <span style={{fontFamily: 'Roboto', fontSize: 11, fontWeight: 600, color: 'rgba(28,30,44,.45)', textTransform: 'uppercase', letterSpacing: .5, flex: 1}}>{window.t('filter')}</span>
+        <div style={{flexShrink: 0, background: '#F2F2F4', borderBottom: '1px solid rgba(28,30,44,.08)'}}>
+          {/* Filter section header — acts as toggle */}
+          <div
+            onClick={() => setFilterSectionOpen(o => !o)}
+            style={{display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', cursor: 'pointer', userSelect: 'none'}}>
+            <Icon.filter color={hasFilter ? '#395AD2' : 'rgba(28,30,44,.4)'} size={15}/>
+            <span style={{fontFamily: 'Roboto', fontSize: 11, fontWeight: 600, color: hasFilter ? '#395AD2' : 'rgba(28,30,44,.45)', textTransform: 'uppercase', letterSpacing: .5, flex: 1}}>{window.t('filter')}</span>
             {hasFilter && (
-              <button onClick={() => { setActiveFilter(EMPTY_FILTER); setOpenFilter(null); }} style={{border: 'none', background: 'transparent', color: '#395AD2', fontFamily: 'Roboto', fontWeight: 600, fontSize: 12, cursor: 'pointer', padding: 0}}>{window.t('reset')}</button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setActiveFilter(EMPTY_FILTER); setOpenFilter(null); }}
+                style={{border: 'none', background: 'transparent', color: '#395AD2', fontFamily: 'Roboto', fontWeight: 600, fontSize: 12, cursor: 'pointer', padding: 0}}>
+                {window.t('reset')}
+              </button>
             )}
+            {hasFilter && !filterSectionOpen && (
+              <div style={{display: 'flex', gap: 4}}>
+                {activeFilter.examRanges.filter(r=>r.from||r.to).map((r,i) => (
+                  <span key={i} style={{padding: '2px 7px', borderRadius: 999, background: '#395AD2', color: '#fff', fontFamily: 'Roboto', fontWeight: 600, fontSize: 10}}>{r.from||'?'}–{r.to||'?'}</span>
+                ))}
+                {activeFilter.modes.map(m => (
+                  <span key={m} style={{padding: '2px 7px', borderRadius: 999, background: '#395AD2', color: '#fff', fontFamily: 'Roboto', fontWeight: 600, fontSize: 10}}>{window.t(`mode_${m}`)}</span>
+                ))}
+                {activeFilter.levels.map(v => (
+                  <span key={v} style={{padding: '2px 7px', borderRadius: 999, background: '#395AD2', color: '#fff', fontFamily: 'Roboto', fontWeight: 600, fontSize: 10}}>{window.t(`level_${v}`)}</span>
+                ))}
+              </div>
+            )}
+            <Icon.chevron open={filterSectionOpen} size={16}/>
           </div>
 
-          <FilterAccordion
-            label={window.t('exam_scope_range')}
-            summary={(() => { const a = activeFilter.examRanges.filter(r=>r.from||r.to); return a.length ? a.map(r=>`${r.from||'?'}–${r.to||'?'}`).join(', ') : null; })()}
-            open={openFilter === 'scope'} onToggle={() => toggleFilter('scope')}>
-            <div style={{paddingTop: 10}}>
-              {activeFilter.examRanges.map((range, i) => (
-                <div key={i} style={{display: 'flex', alignItems: 'center', gap: 8, marginBottom: i < activeFilter.examRanges.length - 1 ? 8 : 0}}>
-                  <FilterInput label={window.t('from')} type="number" value={range.from} onChange={(v) => updateExamRange(i, 'from', v)} placeholder="1"/>
-                  <FilterInput label={window.t('to')}   type="number" value={range.to}   onChange={(v) => updateExamRange(i, 'to',   v)} placeholder="5"/>
-                  {i < activeFilter.examRanges.length - 1 ? (
-                    <button onClick={() => removeExamRange(i)} style={{width: 36, height: 36, borderRadius: '50%', border: '1.5px solid rgba(57,90,210,.3)', background: '#EAF1FF', color: '#395AD2', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0}}>
-                      <Icon.close size={14} color="#395AD2"/>
-                    </button>
-                  ) : (
-                    <button onClick={addExamRange} style={{width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #395AD2', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0}}>
-                      <Icon.plus size={16} color="#395AD2"/>
-                    </button>
-                  )}
+          {filterSectionOpen && (
+            <div style={{padding: '0 16px 10px'}}>
+              <FilterAccordion
+                label={window.t('exam_scope_range')}
+                summary={(() => { const a = activeFilter.examRanges.filter(r=>r.from||r.to); return a.length ? a.map(r=>`${r.from||'?'}–${r.to||'?'}`).join(', ') : null; })()}
+                open={openFilter === 'scope'} onToggle={() => toggleFilter('scope')}>
+                <div style={{paddingTop: 10}}>
+                  {activeFilter.examRanges.map((range, i) => (
+                    <div key={i} style={{display: 'flex', alignItems: 'center', gap: 8, marginBottom: i < activeFilter.examRanges.length - 1 ? 8 : 0}}>
+                      <FilterInput label={window.t('from')} type="number" value={range.from} onChange={(v) => updateExamRange(i, 'from', v)} placeholder="1"/>
+                      <FilterInput label={window.t('to')}   type="number" value={range.to}   onChange={(v) => updateExamRange(i, 'to',   v)} placeholder="5"/>
+                      {i < activeFilter.examRanges.length - 1 ? (
+                        <button onClick={() => removeExamRange(i)} style={{width: 36, height: 36, borderRadius: '50%', border: '1.5px solid rgba(57,90,210,.3)', background: '#EAF1FF', color: '#395AD2', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0}}>
+                          <Icon.close size={14} color="#395AD2"/>
+                        </button>
+                      ) : (
+                        <button onClick={addExamRange} style={{width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #395AD2', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0}}>
+                          <Icon.plus size={16} color="#395AD2"/>
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </FilterAccordion>
+              </FilterAccordion>
 
-          <FilterAccordion
-            label={window.t('mode')}
-            summary={activeFilter.modes.length ? activeFilter.modes.map(m => window.t(`mode_${m}`)).join(', ') : null}
-            open={openFilter === 'mode'} onToggle={() => toggleFilter('mode')}>
-            <div style={{paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 6}}>
-              {['standard','exam','practice'].map(m => {
-                const on = activeFilter.modes.includes(m);
-                return (
-                  <div key={m} onClick={() => toggleMode(m)} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 10, border: `1px solid ${on ? 'rgba(57,90,210,.2)' : 'rgba(28,30,44,.1)'}`, background: on ? '#EAF1FF' : '#fff', cursor: 'pointer'}}>
-                    <span style={{fontFamily: 'Roboto', fontWeight: on ? 600 : 400, fontSize: 14, color: on ? '#395AD2' : 'rgba(28,30,44,.75)'}}>{window.t(`mode_${m}`)}</span>
-                    {on && <Icon.check color="#395AD2" size={18}/>}
-                  </div>
-                );
-              })}
-            </div>
-          </FilterAccordion>
+              <FilterAccordion
+                label={window.t('mode')}
+                summary={activeFilter.modes.length ? activeFilter.modes.map(m => window.t(`mode_${m}`)).join(', ') : null}
+                open={openFilter === 'mode'} onToggle={() => toggleFilter('mode')}>
+                <div style={{paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 6}}>
+                  {['standard','exam','practice'].map(m => {
+                    const on = activeFilter.modes.includes(m);
+                    return (
+                      <div key={m} onClick={() => toggleMode(m)} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 10, border: `1px solid ${on ? 'rgba(57,90,210,.2)' : 'rgba(28,30,44,.1)'}`, background: on ? '#EAF1FF' : '#fff', cursor: 'pointer'}}>
+                        <span style={{fontFamily: 'Roboto', fontWeight: on ? 600 : 400, fontSize: 14, color: on ? '#395AD2' : 'rgba(28,30,44,.75)'}}>{window.t(`mode_${m}`)}</span>
+                        {on && <Icon.check color="#395AD2" size={18}/>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </FilterAccordion>
 
-          <FilterAccordion
-            label={window.t('level')}
-            summary={activeFilter.levels.length ? activeFilter.levels.map(v => window.t(`level_${v}`)).join(', ') : null}
-            open={openFilter === 'level'} onToggle={() => toggleFilter('level')}>
-            <div style={{paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 6}}>
-              {['easy','medium','difficult'].map(v => {
-                const on = activeFilter.levels.includes(v);
-                return (
-                  <div key={v} onClick={() => toggleLevel(v)} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 10, border: `1px solid ${on ? 'rgba(57,90,210,.2)' : 'rgba(28,30,44,.1)'}`, background: on ? '#EAF1FF' : '#fff', cursor: 'pointer'}}>
-                    <span style={{fontFamily: 'Roboto', fontWeight: on ? 600 : 400, fontSize: 14, color: on ? '#395AD2' : 'rgba(28,30,44,.75)'}}>{window.t(`level_${v}`)}</span>
-                    {on && <Icon.check color="#395AD2" size={18}/>}
-                  </div>
-                );
-              })}
+              <FilterAccordion
+                label={window.t('level')}
+                summary={activeFilter.levels.length ? activeFilter.levels.map(v => window.t(`level_${v}`)).join(', ') : null}
+                open={openFilter === 'level'} onToggle={() => toggleFilter('level')}>
+                <div style={{paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 6}}>
+                  {['easy','medium','difficult'].map(v => {
+                    const on = activeFilter.levels.includes(v);
+                    return (
+                      <div key={v} onClick={() => toggleLevel(v)} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 10, border: `1px solid ${on ? 'rgba(57,90,210,.2)' : 'rgba(28,30,44,.1)'}`, background: on ? '#EAF1FF' : '#fff', cursor: 'pointer'}}>
+                        <span style={{fontFamily: 'Roboto', fontWeight: on ? 600 : 400, fontSize: 14, color: on ? '#395AD2' : 'rgba(28,30,44,.75)'}}>{window.t(`level_${v}`)}</span>
+                        {on && <Icon.check color="#395AD2" size={18}/>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </FilterAccordion>
             </div>
-          </FilterAccordion>
+          )}
         </div>
 
         {/* Book list */}
