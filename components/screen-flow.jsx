@@ -32,7 +32,8 @@
       }));
       if (loEntries.length) rows.push({ kind: 'chapter', chapter: ch, items: loEntries });
     });
-    const total = rows.reduce((a, r) => a + (r.kind === 'book' ? r.count : r.items.reduce((b, it) => b + it.count, 0)), 0);
+    const total      = rows.reduce((a, r) => a + (r.kind === 'book' ? r.count : r.items.reduce((b, it) => b + it.count, 0)), 0);
+    const estMinutes = Math.max(1, Math.round(total * 1.5));
 
     return (
       <div style={{flex: 1, background: '#F2F2F4', display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
@@ -48,9 +49,12 @@
             <div style={{position: 'absolute', right: -20, top: -20, width: 120, height: 120, borderRadius: '50%', background: 'rgba(28,183,235,.25)'}}/>
             <div style={{position: 'relative'}}>
               <div style={{fontFamily: 'Roboto', fontSize: 11, letterSpacing: .4, textTransform: 'uppercase', opacity: .8}}>{window.t('your_practice_set')}</div>
-              <div style={{display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4}}>
+              <div style={{display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4, flexWrap: 'wrap'}}>
                 <span style={{fontFamily: 'Roboto', fontWeight: 900, fontSize: 44, letterSpacing: -1}}>{total}</span>
                 <span style={{fontFamily: 'Roboto', fontSize: 14, opacity: .85}}>{window.t('questions')}</span>
+                <span style={{fontFamily: 'Roboto', fontSize: 22, opacity: .4, lineHeight: 1}}>·</span>
+                <span style={{fontFamily: 'Roboto', fontWeight: 700, fontSize: 28, letterSpacing: -.5, fontVariantNumeric: 'tabular-nums'}}>{window.t('est_time', estMinutes)}</span>
+                <span style={{fontFamily: 'Roboto', fontSize: 14, opacity: .85}}>{window.t('est_time_label')}</span>
               </div>
               <div style={{display: 'flex', gap: 16, marginTop: 10, fontFamily: 'Roboto', fontSize: 12, opacity: .9}}>
                 <div style={{display: 'flex', alignItems: 'center', gap: 4}}>
@@ -139,9 +143,14 @@
     useEffect(() => { setPicked(answers[idx] ?? null); }, [idx]);
 
     const next = () => {
-      if (picked !== null) setAnswers({...answers, [idx]: picked});
-      if (idx < total - 1) setIdx(idx + 1);
-      else onFinish({answered: Object.keys(answers).length + (picked !== null ? 1 : 0)});
+      const finalAnswers = picked !== null ? {...answers, [idx]: picked} : answers;
+      if (picked !== null) setAnswers(finalAnswers);
+      if (idx < total - 1) {
+        setIdx(idx + 1);
+      } else {
+        const correct = Object.keys(finalAnswers).filter(i => finalAnswers[i] === qs[Number(i) % qs.length].correct).length;
+        onFinish({ answered: Object.keys(finalAnswers).length, correct });
+      }
     };
     const prev = () => idx > 0 && setIdx(idx - 1);
 
@@ -149,8 +158,12 @@
     return (
       <div style={{flex: 1, background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
         <TopBar title={window.t('question_of', idx + 1, total)} onBack={onBack} right={
-          <div style={{display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'Roboto', fontWeight: 500, fontSize: 13, color: 'rgba(28,30,44,.6)'}}>
-          </div>
+          <button style={{
+            border: '2px solid #395AD2', borderRadius: 999,
+            background: 'transparent', padding: '5px 14px',
+            fontFamily: 'Roboto', fontWeight: 700, fontSize: 13, color: '#395AD2',
+            cursor: 'pointer', letterSpacing: .2,
+          }}>Mana AI</button>
         }/>
 
         {/* Progress bar */}
@@ -219,7 +232,7 @@
   }
 
   // ========== SUBMITTED (matching the uploaded reference) ==========
-  function SubmittedScreen({ onNext, total, score = 72 }) {
+  function SubmittedScreen({ onNext, total, correct = 0 }) {
     window.useLang();
     return (
       <div style={{flex: 1, background: '#395AD2', display: 'flex', flexDirection: 'column', overflow: 'hidden', color: '#fff', position: 'relative'}}>
@@ -245,9 +258,20 @@
             <div style={{width: 90, height: 10, borderRadius: '50%', background: 'rgba(0,0,0,.18)', margin: '8px auto 0', filter: 'blur(4px)'}}/>
           </div>
 
-          <div style={{fontFamily: '"Noto Sans JP", Roboto', fontWeight: 700, fontSize: 30, marginBottom: 14}}>Submitted</div>
-          <div style={{fontFamily: 'Roboto', fontSize: 14, lineHeight: 1.5, maxWidth: 280, color: 'rgba(255,255,255,.85)'}}>
-            Score can be viewed in attempt history screen. Note that it might take some time for score to be generated.
+          <div style={{fontFamily: '"Noto Sans JP", Roboto', fontWeight: 700, fontSize: 24, marginBottom: 16}}>Submitted</div>
+
+          {/* Score */}
+          <div style={{marginBottom: 20, textAlign: 'center'}}>
+            <div style={{display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 6}}>
+              <span style={{fontFamily: 'Roboto', fontWeight: 900, fontSize: 56, letterSpacing: -2, lineHeight: 1}}>{correct}</span>
+              <span style={{fontFamily: 'Roboto', fontWeight: 400, fontSize: 28, opacity: .5}}>/</span>
+              <span style={{fontFamily: 'Roboto', fontWeight: 700, fontSize: 32, opacity: .85}}>{total}</span>
+            </div>
+            <div style={{fontFamily: 'Roboto', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: .6, opacity: .7, marginTop: 4}}>Correct</div>
+          </div>
+
+          <div style={{fontFamily: 'Roboto', fontSize: 13, lineHeight: 1.5, maxWidth: 260, color: 'rgba(255,255,255,.7)'}}>
+            Detailed results are available in your attempt history.
           </div>
 
           {/* Optional stats preview */}
@@ -264,11 +288,113 @@
         </div>
 
         <div style={{padding: '20px 24px 28px', display: 'flex', justifyContent: 'flex-end'}}>
-          <Button kind="white" size="md" onClick={onNext} style={{minWidth: 140}}>{window.t('next')}</Button>
+          <Button kind="white" size="md" onClick={onNext}>{window.t('next')}</Button>
         </div>
       </div>
     );
   }
 
-  Object.assign(window, { MnbReviewScreen: ReviewScreen, MnbPracticeScreen: PracticeScreen, MnbSubmittedScreen: SubmittedScreen });
+  // ========== ATTEMPT HISTORY SCREEN ==========
+  function AttemptHistoryScreen({ onBack, onTakeAgain, attempts = [] }) {
+    window.useLang();
+    const LangToggle = window.MnbLangToggle;
+
+    const pad = (n) => String(n).padStart(2, '0');
+    const countStr = pad(attempts.length);
+
+    return (
+      <div style={{flex: 1, background: '#F2F2F4', display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
+        <TopBar title="Attempt History" onBack={onBack} right={LangToggle && <LangToggle/>}/>
+
+        <div style={{flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px 16px 100px'}}>
+          {/* Stats card */}
+          <div style={{
+            background: 'linear-gradient(135deg, #395AD2 0%, #5533FF 100%)',
+            borderRadius: 16, padding: '20px 24px',
+            marginBottom: 24, color: '#fff',
+            boxShadow: '0 10px 28px rgba(57,90,210,.25)',
+            display: 'flex', alignItems: 'center', gap: 20,
+          }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: 14,
+              background: 'rgba(255,255,255,.18)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <Icon.timer color="#FFD166" size={28}/>
+            </div>
+            <div>
+              <div style={{fontFamily: 'Roboto', fontWeight: 900, fontSize: 48, letterSpacing: -2, lineHeight: 1}}>{countStr}</div>
+              <div style={{fontFamily: 'Roboto', fontSize: 13, opacity: .8, marginTop: 2}}>Attempts</div>
+            </div>
+          </div>
+
+          {/* History table */}
+          <div style={{
+            background: '#fff', borderRadius: 14,
+            border: '1px solid rgba(28,30,44,.1)',
+            overflow: 'hidden',
+            boxShadow: '0 2px 8px rgba(0,0,0,.04)',
+          }}>
+            {/* Header row */}
+            <div style={{
+              display: 'grid', gridTemplateColumns: '1fr auto auto auto',
+              padding: '10px 16px',
+              borderBottom: '1px solid rgba(28,30,44,.1)',
+              background: '#FAFAFC',
+            }}>
+              <div style={{fontFamily: 'Roboto', fontSize: 11, fontWeight: 700, color: 'rgba(28,30,44,.5)', textTransform: 'uppercase', letterSpacing: .4}}>Date</div>
+              <div style={{fontFamily: 'Roboto', fontSize: 11, fontWeight: 700, color: 'rgba(28,30,44,.5)', textTransform: 'uppercase', letterSpacing: .4, minWidth: 80, textAlign: 'center'}}>Status</div>
+              <div style={{fontFamily: 'Roboto', fontSize: 11, fontWeight: 700, color: 'rgba(28,30,44,.5)', textTransform: 'uppercase', letterSpacing: .4, minWidth: 48, textAlign: 'right', marginLeft: 12}}>Score</div>
+              <div style={{width: 20}}/>
+            </div>
+
+            {attempts.length === 0 && (
+              <div style={{padding: '28px 16px', textAlign: 'center', fontFamily: 'Roboto', fontSize: 13, color: 'rgba(28,30,44,.4)'}}>
+                No attempts yet
+              </div>
+            )}
+
+            {[...attempts].reverse().map((a, i) => {
+              const failed = a.status === 'failed' || (typeof a.correct === 'number' && a.correct < Math.ceil(a.total * 0.5));
+              const statusLabel = failed ? 'FAILED' : 'SUBMITTED';
+              const hasScore = typeof a.correct === 'number' && typeof a.total === 'number';
+              const scoreStr = hasScore ? `${pad(a.correct)}/${pad(a.total)}` : '--/--';
+              const isLast = i === attempts.length - 1;
+
+              return (
+                <div key={i} style={{
+                  display: 'grid', gridTemplateColumns: '1fr auto auto auto',
+                  alignItems: 'center',
+                  padding: '13px 16px',
+                  borderBottom: isLast ? 'none' : '1px solid rgba(28,30,44,.07)',
+                }}>
+                  <div style={{fontFamily: 'Roboto', fontSize: 13, color: 'rgba(28,30,44,.87)', fontVariantNumeric: 'tabular-nums'}}>{a.date}</div>
+                  <div style={{
+                    padding: '3px 8px', borderRadius: 6,
+                    border: `1.5px solid ${failed ? '#E53935' : '#395AD2'}`,
+                    fontFamily: 'Roboto', fontWeight: 700, fontSize: 10, letterSpacing: .4,
+                    color: failed ? '#E53935' : '#395AD2',
+                    minWidth: 80, textAlign: 'center',
+                  }}>{statusLabel}</div>
+                  <div style={{fontFamily: 'Roboto', fontWeight: 700, fontSize: 13, color: 'rgba(28,30,44,.87)', fontVariantNumeric: 'tabular-nums', minWidth: 48, textAlign: 'right', marginLeft: 12}}>{scoreStr}</div>
+                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: 20, marginLeft: 4}}>
+                    {hasScore && <Icon.chevron color="rgba(28,30,44,.3)" size={16}/>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Bottom bar */}
+        <div style={{position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 16px 20px', background: '#F2F2F4', borderTop: '1px solid rgba(28,30,44,.08)'}}>
+          <div style={{display: 'flex', justifyContent: 'flex-end'}}>
+            <Button size="md" onClick={onTakeAgain}>Take Again</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  Object.assign(window, { MnbReviewScreen: ReviewScreen, MnbPracticeScreen: PracticeScreen, MnbSubmittedScreen: SubmittedScreen, MnbAttemptHistoryScreen: AttemptHistoryScreen });
 })();

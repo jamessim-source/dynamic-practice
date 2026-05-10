@@ -40,6 +40,13 @@
       // Configure — CTA
       select_to_continue: 'Select items to continue',
       review_questions: (n) => `Review ${n} Question${n === 1 ? '' : 's'}`,
+      est_time: (min) => `~${min} min`,
+      est_time_label: 'estimated',
+      per_lo_label: 'Questions per selection',
+      per_lo_hint: 'Set the default number of questions when selecting a topic',
+      select_all_questions: 'All Questions',
+      select_all_books: 'All Books',
+      select_all_los: 'All LOs',
 
       // Filter sheet
       filter: 'Filter',
@@ -53,6 +60,9 @@
       apply: 'Apply',
       add_range: 'Add range',
       mode_placeholder: 'e.g. exam, standard, practice',
+      mode_standard: 'Standard',
+      mode_exam: 'Exam',
+      mode_practice: 'Practice',
       level_easy: 'Easy',
       level_medium: 'Medium',
       level_difficult: 'Difficult',
@@ -71,6 +81,7 @@
       well_done: 'Well done!',
       practice_complete: 'Practice complete',
       back_to_home: 'Back to home',
+      retry: 'Retry',
     },
 
     ja: {
@@ -111,6 +122,13 @@
       // Configure — CTA
       select_to_continue: '項目を選択して続ける',
       review_questions: (n) => `${n}アイテムを確認`,
+      est_time: (min) => `約${min}分`,
+      est_time_label: '目安',
+      per_lo_label: '選択ごとの問題数',
+      per_lo_hint: 'トピックを選択するときのデフォルト問題数を設定します',
+      select_all_questions: '全問題',
+      select_all_books: '全ブック',
+      select_all_los: '全学習目標',
 
       // Filter sheet
       filter: 'フィルター',
@@ -124,6 +142,9 @@
       apply: '適用',
       add_range: '範囲を追加',
       mode_placeholder: '例：exam、standard、practice',
+      mode_standard: 'スタンダード',
+      mode_exam: '試験',
+      mode_practice: '練習',
       level_easy: '易しい',
       level_medium: '普通',
       level_difficult: '難しい',
@@ -142,6 +163,7 @@
       well_done: 'よくできました！',
       practice_complete: '練習完了',
       back_to_home: 'ホームに戻る',
+      retry: 'もう一度',
     },
   };
 

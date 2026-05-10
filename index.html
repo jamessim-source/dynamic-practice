@@ -108,7 +108,8 @@ function App() {
     try { return localStorage.getItem('dpq_screen') || 'landing'; } catch (e) { return 'landing'; }
   });
   const [selection, setSelection] = useState({});
-  const [practiceMeta, setPracticeMeta] = useState({ total: 10, name: '' });
+  const [practiceMeta, setPracticeMeta] = useState({ total: 10, name: '', correct: 0 });
+  const [attempts, setAttempts] = useState([]);
 
   useEffect(() => {
     try { localStorage.setItem('dpq_screen', screen); } catch (e) {}
@@ -152,6 +153,7 @@ function App() {
       ['review', '4 · Review'],
       ['practice', '5 · Practice'],
       ['submitted', '6 · Submitted'],
+      ['history', '7 · History'],
     ];
     tabs.innerHTML = screens.map(([k, l]) => `<button data-v="${k}" class="${screen === k ? 'active' : ''}">${l}</button>`).join('');
     tabs.querySelectorAll('button').forEach(b => {
@@ -159,7 +161,7 @@ function App() {
     });
   }, [screen]);
 
-  const { MnbCourseSelectScreen, MnbCourseHomeScreen, MnbConfigureScreen, MnbReviewScreen, MnbPracticeScreen, MnbSubmittedScreen } = window;
+  const { MnbCourseSelectScreen, MnbCourseHomeScreen, MnbConfigureScreen, MnbReviewScreen, MnbPracticeScreen, MnbSubmittedScreen, MnbAttemptHistoryScreen } = window;
   const IOSDevice = window.IOSDevice;
 
   let content;
@@ -190,10 +192,23 @@ function App() {
     content = <MnbPracticeScreen
       total={practiceMeta.total || 10}
       onBack={() => setScreen('review')}
-      onFinish={() => setScreen('submitted')}
+      onFinish={(meta) => {
+        const total = practiceMeta.total || 10;
+        setPracticeMeta(prev => ({...prev, ...meta}));
+        const today = new Date();
+        const dateStr = `${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
+        setAttempts(prev => [...prev, { date: dateStr, status: 'submitted', correct: meta.correct, total }]);
+        setScreen('submitted');
+      }}
     />;
-  } else {
-    content = <MnbSubmittedScreen total={practiceMeta.total || 10} onNext={() => setScreen('home')}/>;
+  } else if (screen === 'submitted') {
+    content = <MnbSubmittedScreen total={practiceMeta.total || 10} correct={practiceMeta.correct || 0} onNext={() => setScreen('history')}/>;
+  } else if (screen === 'history') {
+    content = <MnbAttemptHistoryScreen
+      attempts={attempts}
+      onBack={() => setScreen('submitted')}
+      onTakeAgain={() => { setPracticeMeta(prev => ({...prev, correct: 0})); setScreen('practice'); }}
+    />;
   }
 
   return (
@@ -208,7 +223,7 @@ function App() {
 
 // Wait for all dependency scripts to transpile and register
 function boot() {
-  if (!window.MnbCourseSelectScreen || !window.MnbConfigureScreen || !window.IOSDevice) {
+  if (!window.MnbCourseSelectScreen || !window.MnbConfigureScreen || !window.MnbAttemptHistoryScreen || !window.IOSDevice) {
     return setTimeout(boot, 40);
   }
   ReactDOM.createRoot(document.getElementById('root')).render(<App/>);

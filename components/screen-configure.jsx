@@ -7,7 +7,7 @@
   const { MnbIcon: Icon, MnbButton: Button, MnbCheckbox: Checkbox, MnbTopBar: TopBar } = window;
 
   // Filter model: { examRanges: [{from, to}], mode: string, level: string }
-  const EMPTY_FILTER = { examRanges: [], mode: '', level: '' };
+  const EMPTY_FILTER = { examRanges: [{from:'',to:''}], modes: [], levels: [] };
 
   // ========= Compact count input =========
   function CountInput({ value, max, onChange }) {
@@ -386,6 +386,29 @@
     );
   }
 
+  // ========= Collapsible filter accordion row =========
+  function FilterAccordion({ label, summary, open, onToggle, children }) {
+    return (
+      <div style={{
+        background: '#fff', borderRadius: 12, marginBottom: 8, overflow: 'hidden',
+        border: `1px solid ${open ? 'rgba(57,90,210,.2)' : 'rgba(28,30,44,.1)'}`,
+      }}>
+        <div onClick={onToggle} style={{padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer'}}>
+          <div style={{flex: 1, minWidth: 0}}>
+            <div style={{fontFamily: 'Roboto', fontSize: 11, fontWeight: 600, color: 'rgba(28,30,44,.45)', textTransform: 'uppercase', letterSpacing: .4}}>{label}</div>
+            {summary && <div style={{fontFamily: 'Roboto', fontSize: 14, color: 'rgba(28,30,44,.87)', marginTop: 3}}>{summary}</div>}
+          </div>
+          <Icon.chevron open={open} size={18}/>
+        </div>
+        {open && (
+          <div style={{padding: '4px 14px 14px', borderTop: '1px solid rgba(28,30,44,.06)'}}>
+            {children}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // ========= Main configure screen =========
   function ConfigureScreen({ onBack, onReview }) {
     window.useLang();
@@ -397,7 +420,7 @@
     const [selection, setSelection] = useState({});
     const [openMap, setOpenMap]     = useState({});
     const [activeFilter, setActiveFilter] = useState(EMPTY_FILTER);
-    const [showFilter, setShowFilter]     = useState(false);
+    const [questionsPerLO, setQuestionsPerLO] = useState('');
 
     // ---- cascade helpers ----
     const getDescendants = (id, kind) => {
@@ -454,6 +477,38 @@
       return items;
     };
 
+    const getLOCount = (id, kind) => {
+      if (kind === 'lo') return 1;
+      if (kind === 'book') {
+        const b = course.books.find(b => b.id === id);
+        return b ? b.chapters.reduce((a, ch) => a + ch.topics.reduce((s, t) => s + t.los.length, 0), 0) : 1;
+      }
+      if (kind === 'chapter') {
+        for (const b of course.books) { const ch = b.chapters.find(c => c.id === id); if (ch) return ch.topics.reduce((a, t) => a + t.los.length, 0); }
+      }
+      if (kind === 'topic') {
+        for (const b of course.books) for (const ch of b.chapters) { const t = ch.topics.find(tp => tp.id === id); if (t) return t.los.length; }
+      }
+      return 1;
+    };
+
+    const getAvailableForId = (id, kind) => {
+      if (kind === 'book') { const b = course.books.find(b => b.id === id); return b ? b.available : 1; }
+      for (const b of course.books) {
+        if (kind === 'chapter') { const ch = b.chapters.find(c => c.id === id); if (ch) return ch.available; }
+        for (const ch of b.chapters) {
+          if (kind === 'topic') { const t = ch.topics.find(tp => tp.id === id); if (t) return t.available; }
+          for (const t of ch.topics) { if (kind === 'lo') { const lo = t.los.find(lo => lo.id === id); if (lo) return lo.available; } }
+        }
+      }
+      return 1;
+    };
+
+    const perLOCount = (loCount, available) => {
+      const n = parseInt(questionsPerLO, 10);
+      return (questionsPerLO === '' || isNaN(n)) ? available : Math.min(n * loCount, available);
+    };
+
     const isChecked      = (id) => !!selection[id];
     const isIndeterminate = (id, kind) => {
       if (selection[id]) return false;
@@ -471,7 +526,7 @@
           // select: remove ancestor and descendant conflicts first
           getAncestors(id, kind).forEach(a => delete next[a.id]);
           getDescendants(id, kind).forEach(d => delete next[d.id]);
-          next[id] = { count: available, kind };
+          next[id] = { count: perLOCount(getLOCount(id, kind), available), kind };
         }
         return next;
       });
@@ -485,27 +540,41 @@
     // Selection context passed through the component tree
     const selCtx = { selection, isChecked, isIndeterminate, toggle, updateCount, toggleOpen };
 
+    // Re-apply per-LO count to all selections when the setting changes
+    useEffect(() => {
+      setSelection(prev => {
+        if (Object.keys(prev).length === 0) return prev;
+        const next = {};
+        Object.keys(prev).forEach(id => {
+          const { kind } = prev[id];
+          next[id] = { ...prev[id], count: perLOCount(getLOCount(id, kind), getAvailableForId(id, kind)) };
+        });
+        return next;
+      });
+    }, [questionsPerLO]);
+
     // ---- filter logic ----
-    const hasFilter = activeFilter.examRanges.length > 0 || !!activeFilter.mode || !!activeFilter.level;
+    const hasFilter = activeFilter.examRanges.some(r => r.from || r.to) || activeFilter.modes.length > 0 || activeFilter.levels.length > 0;
 
     const loMatchesFilter = (lo, f) => {
       const tags = lo.tags || {};
-      if (f.examRanges.length > 0) {
+      const activeRanges = f.examRanges.filter(r => r.from || r.to);
+      if (activeRanges.length > 0) {
         const loScopes = tags.examScope || [];
-        const ok = f.examRanges.some(r => {
-          const from = r.from !== '' ? Number(r.from) : 1;
-          const to   = r.to   !== '' ? Number(r.to)   : 5;
+        const ok = activeRanges.some(r => {
+          const from = r.from !== '' ? Number(r.from) : 0;
+          const to   = r.to   !== '' ? Number(r.to)   : Infinity;
           return loScopes.some(s => s >= from && s <= to);
         });
         if (!ok) return false;
       }
-      if (f.mode  && !(tags.mode  || '').toLowerCase().includes(f.mode.toLowerCase()))  return false;
-      if (f.level && tags.level !== f.level) return false;
+      if (f.modes.length > 0  && !f.modes.includes(tags.mode))   return false;
+      if (f.levels.length > 0 && !f.levels.includes(tags.level)) return false;
       return true;
     };
 
     const buildDisplayBooks = (f) => {
-      const hasF = f.examRanges.length > 0 || f.mode || f.level;
+      const hasF = f.examRanges.some(r => r.from || r.to) || f.modes.length > 0 || f.levels.length > 0;
       return hasF
         ? course.books.map(book => ({
             ...book,
@@ -523,89 +592,95 @@
 
     const displayBooks = buildDisplayBooks(activeFilter);
 
-    // When filter is applied, auto-select matching LOs from the two default topics
-    const DEFAULT_TOPIC_IDS = new Set(['t1-1', 't4-2']);
-    const applyFilter = (f) => {
-      setActiveFilter(f);
-      setShowFilter(false);
-      const hasF = f.examRanges.length > 0 || f.mode || f.level;
-      if (!hasF) return;
-      const newSel = {};
-      course.books.forEach(b => b.chapters.forEach(ch => ch.topics.forEach(t => {
-        if (!DEFAULT_TOPIC_IDS.has(t.id)) return;
-        t.los.forEach(lo => {
-          if (loMatchesFilter(lo, f)) newSel[lo.id] = { count: lo.available, kind: 'lo' };
-        });
-      })));
-      setSelection(newSel);
-    };
+    // ---- filter accordion state ----
+    const [openFilter, setOpenFilter] = useState(null);
+    const toggleFilter   = (key) => setOpenFilter(k => k === key ? null : key);
+    const addExamRange   = () => setActiveFilter(f => ({...f, examRanges: [...f.examRanges, {from:'',to:''}]}));
+    const removeExamRange = (i) => setActiveFilter(f => ({...f, examRanges: f.examRanges.length > 1 ? f.examRanges.filter((_,idx) => idx !== i) : [{from:'',to:''}]}));
+    const updateExamRange = (i, field, val) => setActiveFilter(f => { const rs = [...f.examRanges]; rs[i] = {...rs[i], [field]: val.replace(/[^0-9]/g,'')}; return {...f, examRanges: rs}; });
+    const toggleMode     = (m) => setActiveFilter(f => ({...f, modes:  f.modes.includes(m)  ? f.modes.filter(x=>x!==m)  : [...f.modes, m]}));
+    const toggleLevel    = (v) => setActiveFilter(f => ({...f, levels: f.levels.includes(v) ? f.levels.filter(x=>x!==v) : [...f.levels, v]}));
 
     // ---- summary ----
     const totalSelected   = Object.values(selection).reduce((a, v) => a + (v.count || 0), 0);
     const itemsSelected   = Object.keys(selection).length;
     const hasAnySelection = itemsSelected > 0;
+    const estMinutes      = Math.max(1, Math.round(totalSelected * 1.5));
 
     const selectAllBooks = () => {
       setSelection(prev => {
         const next = {...prev};
         displayBooks.forEach(b => {
-          if (!next[b.id]) next[b.id] = { count: b.available, kind: 'book' };
+          if (!next[b.id]) next[b.id] = { count: perLOCount(getLOCount(b.id, 'book'), b.available), kind: 'book' };
         });
         return next;
       });
     };
+    const selectAllQuestions = () => {
+      const next = {};
+      displayBooks.forEach(b => { next[b.id] = { count: b.available, kind: 'book' }; });
+      setSelection(next);
+    };
+    const selectAllLOs = () => {
+      const next = {};
+      displayBooks.forEach(b => b.chapters.forEach(ch => ch.topics.forEach(t => t.los.forEach(lo => {
+        next[lo.id] = { count: perLOCount(1, lo.available), kind: 'lo' };
+      }))));
+      setSelection(next);
+    };
     const clearSelection = () => setSelection({});
-
-    // Filter pill text
-    const filterParts = [];
-    if (activeFilter.examRanges.length > 0)
-      filterParts.push(`Scope ${activeFilter.examRanges.map(r => `${r.from || 1}–${r.to || 5}`).join(', ')}`);
-    if (activeFilter.mode)  filterParts.push(activeFilter.mode);
-    if (activeFilter.level) filterParts.push(activeFilter.level);
-
-    const filterBtn = (
-      <button
-        onClick={() => setShowFilter(true)}
-        style={{
-          position: 'relative', width: 32, height: 32, borderRadius: 8, border: 'none',
-          background: hasFilter ? '#EAF1FF' : 'transparent',
-          boxShadow: hasFilter ? 'inset 0 0 0 1px rgba(57,90,210,.25)' : 'inset 0 0 0 1px rgba(28,30,44,.12)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-        }}>
-        <Icon.filter size={18} color={hasFilter ? '#395AD2' : 'rgba(28,30,44,.6)'}/>
-        {hasFilter && <div style={{position: 'absolute', top: -4, right: -4, width: 8, height: 8, borderRadius: '50%', background: '#395AD2'}}/>}
-      </button>
-    );
 
     return (
       <div style={{flex: 1, background: '#F2F2F4', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative'}}>
-        <TopBar title={window.t('create_practice_set')} onBack={onBack} right={
-          <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
-            {LangToggle && <LangToggle/>}
-            {filterBtn}
-          </div>
-        }/>
+        <TopBar title={window.t('create_practice_set')} onBack={onBack} right={LangToggle && <LangToggle/>}/>
 
         {/* Summary header */}
         <div style={{background: '#fff', padding: '12px 16px 14px', borderBottom: '1px solid rgba(28,30,44,.08)', flexShrink: 0}}>
           <div style={{display: 'flex', alignItems: 'center', gap: 14}}>
             <div style={{flex: 1}}>
-              <div style={{display: 'flex', alignItems: 'baseline', gap: 6}}>
+              <div style={{display: 'flex', alignItems: 'baseline', gap: 10}}>
                 <span style={{fontFamily: 'Roboto', fontWeight: 900, fontSize: 28, color: '#395AD2', letterSpacing: -.5, fontVariantNumeric: 'tabular-nums'}}>{totalSelected}</span>
                 <span style={{fontFamily: 'Roboto', fontSize: 12, color: 'rgba(28,30,44,.6)'}}>{window.t(totalSelected === 1 ? 'question_total' : 'questions_total')}</span>
-              </div>
-              <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.55)', marginTop: 2}}>
-                {itemsSelected} {window.t(itemsSelected === 1 ? 'item_selected' : 'items_selected')}
+                {totalSelected > 0 && <>
+                  <span style={{fontFamily: 'Roboto', fontSize: 16, color: 'rgba(28,30,44,.2)', lineHeight: 1}}>·</span>
+                  <span style={{fontFamily: 'Roboto', fontWeight: 700, fontSize: 20, color: 'rgba(28,30,44,.55)', letterSpacing: -.3, fontVariantNumeric: 'tabular-nums'}}>{window.t('est_time', estMinutes)}</span>
+                  <span style={{fontFamily: 'Roboto', fontSize: 12, color: 'rgba(28,30,44,.6)'}}>{window.t('est_time_label')}</span>
+                </>}
               </div>
             </div>
-            <button
-              onClick={hasAnySelection ? clearSelection : selectAllBooks}
-              style={{border: 'none', background: 'transparent', color: '#395AD2', fontFamily: 'Roboto', fontWeight: 600, fontSize: 13, cursor: 'pointer'}}>
-              {hasAnySelection ? window.t('clear') : window.t('select_all')}
-            </button>
+            {hasAnySelection ? (
+              <button onClick={clearSelection} style={{border: 'none', background: 'transparent', color: '#395AD2', fontFamily: 'Roboto', fontWeight: 600, fontSize: 13, cursor: 'pointer'}}>
+                {window.t('clear')}
+              </button>
+            ) : (
+              <button onClick={selectAllQuestions} style={{border: 'none', background: 'transparent', color: '#395AD2', fontFamily: 'Roboto', fontWeight: 600, fontSize: 13, cursor: 'pointer'}}>
+                {window.t('select_all_questions')}
+              </button>
+            )}
           </div>
 
-          <div style={{marginTop: 12, padding: '9px 12px', borderRadius: 10, background: '#F2F2F4', display: 'flex', alignItems: 'center', gap: 10}}>
+          {/* Per-LO question count setting */}
+          <div style={{marginTop: 10, padding: '8px 12px', borderRadius: 10, background: '#F2F2F4', display: 'flex', alignItems: 'center', gap: 10}}>
+            <div style={{flex: 1}}>
+              <div style={{fontFamily: 'Roboto', fontSize: 12, fontWeight: 600, color: 'rgba(28,30,44,.75)'}}>{window.t('per_lo_label')}</div>
+              <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.45)', marginTop: 2}}>{window.t('per_lo_hint')}</div>
+            </div>
+            <input
+              type="text" inputMode="numeric" value={questionsPerLO}
+              onChange={(e) => setQuestionsPerLO(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))}
+              placeholder=""
+              style={{
+                width: 44, height: 30, borderRadius: 8,
+                border: '1.5px solid rgba(57,90,210,.35)',
+                background: '#fff', textAlign: 'center',
+                fontFamily: 'Roboto', fontWeight: 700, fontSize: 14, color: '#395AD2',
+                fontVariantNumeric: 'tabular-nums', outline: 'none', flexShrink: 0,
+              }}
+              onFocus={(e) => e.target.select()}
+            />
+          </div>
+
+          <div style={{marginTop: 10, padding: '9px 12px', borderRadius: 10, background: '#F2F2F4', display: 'flex', alignItems: 'center', gap: 10}}>
             <Icon.book color="#395AD2" size={16}/>
             <div style={{minWidth: 0}}>
               <div style={{fontFamily: 'Roboto', fontSize: 10, color: 'rgba(28,30,44,.45)', letterSpacing: .4, textTransform: 'uppercase'}}>{course.code}</div>
@@ -613,27 +688,77 @@
             </div>
           </div>
 
-          <div style={{marginTop: 10, padding: '8px 10px', borderRadius: 8, background: '#F2F6FF', display: 'flex', alignItems: 'flex-start', gap: 8}}>
-            <Icon.sparkle color="#395AD2" size={14}/>
-            <div style={{fontFamily: 'Roboto', fontSize: 11, color: 'rgba(28,30,44,.75)', lineHeight: 1.45}}>
-              {window.t('random_hint')}
-            </div>
-          </div>
         </div>
 
-        {/* Active filter pill */}
-        {hasFilter && (
-          <div style={{flexShrink: 0, padding: '8px 16px 0'}}>
-            <div style={{padding: '7px 12px', borderRadius: 8, background: '#EAF1FF', border: '1px solid rgba(57,90,210,.2)', display: 'flex', alignItems: 'center', gap: 8}}>
-              <Icon.filter size={13} color="#395AD2"/>
-              <span style={{fontFamily: 'Roboto', fontSize: 12, color: '#395AD2', flex: 1}}>{filterParts.join(' · ')}</span>
-              <button onClick={() => setActiveFilter(EMPTY_FILTER)} style={{border: 'none', background: 'transparent', color: '#395AD2', fontFamily: 'Roboto', fontWeight: 600, fontSize: 12, cursor: 'pointer', padding: 0}}>{window.t('clear')}</button>
-            </div>
+        {/* Inline filters */}
+        <div style={{flexShrink: 0, background: '#F2F2F4', borderBottom: '1px solid rgba(28,30,44,.08)', padding: '10px 16px 4px'}}>
+          <div style={{display: 'flex', alignItems: 'center', marginBottom: 8}}>
+            <span style={{fontFamily: 'Roboto', fontSize: 11, fontWeight: 600, color: 'rgba(28,30,44,.45)', textTransform: 'uppercase', letterSpacing: .5, flex: 1}}>{window.t('filter')}</span>
+            {hasFilter && (
+              <button onClick={() => { setActiveFilter(EMPTY_FILTER); setOpenFilter(null); }} style={{border: 'none', background: 'transparent', color: '#395AD2', fontFamily: 'Roboto', fontWeight: 600, fontSize: 12, cursor: 'pointer', padding: 0}}>{window.t('reset')}</button>
+            )}
           </div>
-        )}
+
+          <FilterAccordion
+            label={window.t('exam_scope_range')}
+            summary={(() => { const a = activeFilter.examRanges.filter(r=>r.from||r.to); return a.length ? a.map(r=>`${r.from||'?'}–${r.to||'?'}`).join(', ') : null; })()}
+            open={openFilter === 'scope'} onToggle={() => toggleFilter('scope')}>
+            <div style={{paddingTop: 10}}>
+              {activeFilter.examRanges.map((range, i) => (
+                <div key={i} style={{display: 'flex', alignItems: 'center', gap: 8, marginBottom: i < activeFilter.examRanges.length - 1 ? 8 : 0}}>
+                  <FilterInput label={window.t('from')} type="number" value={range.from} onChange={(v) => updateExamRange(i, 'from', v)} placeholder="1"/>
+                  <FilterInput label={window.t('to')}   type="number" value={range.to}   onChange={(v) => updateExamRange(i, 'to',   v)} placeholder="5"/>
+                  {i < activeFilter.examRanges.length - 1 ? (
+                    <button onClick={() => removeExamRange(i)} style={{width: 36, height: 36, borderRadius: '50%', border: '1.5px solid rgba(57,90,210,.3)', background: '#EAF1FF', color: '#395AD2', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0}}>
+                      <Icon.close size={14} color="#395AD2"/>
+                    </button>
+                  ) : (
+                    <button onClick={addExamRange} style={{width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #395AD2', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0}}>
+                      <Icon.plus size={16} color="#395AD2"/>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </FilterAccordion>
+
+          <FilterAccordion
+            label={window.t('mode')}
+            summary={activeFilter.modes.length ? activeFilter.modes.map(m => window.t(`mode_${m}`)).join(', ') : null}
+            open={openFilter === 'mode'} onToggle={() => toggleFilter('mode')}>
+            <div style={{paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 6}}>
+              {['standard','exam','practice'].map(m => {
+                const on = activeFilter.modes.includes(m);
+                return (
+                  <div key={m} onClick={() => toggleMode(m)} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 10, border: `1px solid ${on ? 'rgba(57,90,210,.2)' : 'rgba(28,30,44,.1)'}`, background: on ? '#EAF1FF' : '#fff', cursor: 'pointer'}}>
+                    <span style={{fontFamily: 'Roboto', fontWeight: on ? 600 : 400, fontSize: 14, color: on ? '#395AD2' : 'rgba(28,30,44,.75)'}}>{window.t(`mode_${m}`)}</span>
+                    {on && <Icon.check color="#395AD2" size={18}/>}
+                  </div>
+                );
+              })}
+            </div>
+          </FilterAccordion>
+
+          <FilterAccordion
+            label={window.t('level')}
+            summary={activeFilter.levels.length ? activeFilter.levels.map(v => window.t(`level_${v}`)).join(', ') : null}
+            open={openFilter === 'level'} onToggle={() => toggleFilter('level')}>
+            <div style={{paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 6}}>
+              {['easy','medium','difficult'].map(v => {
+                const on = activeFilter.levels.includes(v);
+                return (
+                  <div key={v} onClick={() => toggleLevel(v)} style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 10, border: `1px solid ${on ? 'rgba(57,90,210,.2)' : 'rgba(28,30,44,.1)'}`, background: on ? '#EAF1FF' : '#fff', cursor: 'pointer'}}>
+                    <span style={{fontFamily: 'Roboto', fontWeight: on ? 600 : 400, fontSize: 14, color: on ? '#395AD2' : 'rgba(28,30,44,.75)'}}>{window.t(`level_${v}`)}</span>
+                    {on && <Icon.check color="#395AD2" size={18}/>}
+                  </div>
+                );
+              })}
+            </div>
+          </FilterAccordion>
+        </div>
 
         {/* Book list */}
-        <div style={{flex: 1, minHeight: 0, overflowY: 'auto', padding: hasFilter ? '10px 16px 16px' : '12px 16px 16px'}}>
+        <div style={{flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 16px 16px'}}>
           {displayBooks.length === 0 ? (
             <div style={{textAlign: 'center', padding: '48px 24px'}}>
               <div style={{fontFamily: 'Roboto', fontSize: 14, color: 'rgba(28,30,44,.4)', lineHeight: 1.6}}>{window.t('no_los_match')}</div>
@@ -653,14 +778,7 @@
           </Button>
         </div>
 
-        {/* Filter sheet */}
-        {showFilter && (
-          <FilterSheet
-            initialFilter={activeFilter}
-            onClose={() => setShowFilter(false)}
-            onApply={applyFilter}
-          />
-        )}
+
       </div>
     );
   }
